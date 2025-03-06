@@ -5,11 +5,6 @@ import { Download, FileCode, Upload } from 'lucide-vue-next'
 const store = useStore()
 
 const {
-  isDark,
-  isEditOnLeft,
-} = storeToRefs(store)
-
-const {
   exportEditorContent2HTML,
   exportEditorContent2MD,
   importMarkdownContent,
@@ -34,14 +29,6 @@ const {
         <FileCode class="mr-2 size-4" />
         导出 .html
       </MenubarItem>
-      <MenubarSeparator />
-      <MenubarCheckboxItem v-model:checked="isDark">
-        深色模式
-      </MenubarCheckboxItem>
-      <MenubarSeparator />
-      <MenubarCheckboxItem v-model:checked="isEditOnLeft">
-        左侧编辑
-      </MenubarCheckboxItem>
     </MenubarContent>
   </MenubarMenu>
 </template>

@@ -2,7 +2,8 @@ import type { ReadTimeResults } from 'reading-time'
 import DEFAULT_CONTENT from '@/assets/example/markdown.md?raw'
 import DEFAULT_CSS_CONTENT from '@/assets/example/theme-css.txt?raw'
 import { altKey, codeBlockThemeOptions, colorOptions, fontFamilyOptions, fontSizeOptions, legendOptions, shiftKey, themeMap, themeOptions } from '@/config'
-import { addPrefix, css2json, customCssWithTemplate, customizeTheme, downloadMD, exportHTML, formatDoc } from '@/utils'
+import { addPrefix, css2json, customCssWithTemplate, customizeTheme, formatDoc } from '@/utils'
+import { tauriFs } from '@/utils/tauri-fs'
 
 import { initRenderer } from '@/utils/renderer'
 import CodeMirror from 'codemirror'
@@ -390,41 +391,55 @@ export const useStore = defineStore(`store`, () => {
     toggleUseIndent()
   })
 
-  // 导出编辑器内容为 HTML，并且下载到本地
-  const exportEditorContent2HTML = () => {
-    exportHTML(primaryColor.value)
-    document.querySelector(`#output`)!.innerHTML = output.value
+  // 导出 HTML 文档
+  const exportEditorContent2HTML = async () => {
+    try {
+      const element = document.querySelector(`#output`)!
+      setStyles(element)
+
+      const htmlStr = element.innerHTML
+        .replace(/var\(--md-primary-color\)/g, primaryColor.value)
+        .replace(/--md-primary-color:.+?;/g, ``)
+
+      const result = await tauriFs.exportHtml(htmlStr)
+      if (result.success) {
+        toast.success('导出HTML文档成功')
+      } else {
+        toast.error(result.message || '导出失败')
+      }
+    } catch (error) {
+      toast.error(`导出失败: ${error}`)
+    }
   }
 
-  // 导出编辑器内容到本地
-  const exportEditorContent2MD = () => {
-    downloadMD(editor.value!.getValue())
+  // 导出 Markdown 文档
+  const exportEditorContent2MD = async () => {
+    try {
+      const result = await tauriFs.exportMarkdown(posts.value[currentPostIndex.value].content)
+      if (result.success) {
+        toast.success('导出Markdown文档成功')
+      } else {
+        toast.error(result.message || '导出失败')
+      }
+    } catch (error) {
+      toast.error(`导出失败: ${error}`)
+    }
   }
 
   // 导入 Markdown 文档
-  const importMarkdownContent = () => {
-    const body = document.body
-    const input = document.createElement(`input`)
-    input.type = `file`
-    input.name = `filename`
-    input.accept = `.md`
-    input.onchange = () => {
-      const file = input.files![0]
-      if (!file) {
-        return
+  const importMarkdownContent = async () => {
+    try {
+      const result = await tauriFs.openFile(['md'])
+      if (result.success && result.content) {
+        posts.value[currentPostIndex.value].content = result.content
+        toRaw(editor.value!).setValue(result.content)
+        toast.success('导入Markdown文档成功')
+      } else if (!result.success) {
+        toast.error(result.message || '导入失败')
       }
-
-      const reader = new FileReader()
-      reader.readAsText(file)
-      reader.onload = (event) => {
-        (editor.value!).setValue((event.target!).result as string)
-        toast.success(`文档导入成功`)
-      }
+    } catch (error) {
+      toast.error(`导入失败: ${error}`)
     }
-
-    body.appendChild(input)
-    input.click()
-    body.removeChild(input)
   }
 
   const isOpenConfirmDialog = ref(false)

@@ -118,7 +118,7 @@ onBeforeMount(() => {
 
 <template>
   <Dialog v-model:open="dialogVisible" @update:open="onUpdate">
-    <DialogTrigger>
+    <!-- <DialogTrigger>
       <Button variant="outline" @click="prePost">
         发布
       </Button>
@@ -205,7 +205,7 @@ onBeforeMount(() => {
           确 定
         </Button>
       </DialogFooter>
-    </DialogContent>
+    </DialogContent> -->
   </Dialog>
 
   <PostTaskDialog v-model:open="postTaskDialogVisible" :post="form" />
