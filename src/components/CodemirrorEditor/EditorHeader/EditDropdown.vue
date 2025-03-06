@@ -8,7 +8,7 @@ const { toggleShowInsertFormDialog, toggleShowUploadImgDialog } = useDisplayStor
 <template>
   <MenubarMenu>
     <MenubarTrigger>
-      编辑
+      功能
     </MenubarTrigger>
     <MenubarContent align="start">
       <MenubarItem @click="toggleShowUploadImgDialog()">

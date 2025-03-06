@@ -24,7 +24,7 @@
     "serve": "tauri dev",
     "tauri": "tauri",
     "dev:web": "vite --host",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "LANG=zh_CN.UTF-8 && tauri dev",
     "tauri:build": "cross-env NODE_OPTIONS='--no-node-snapshot' tauri build"
   },
   "dependencies": {

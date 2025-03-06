@@ -239,7 +239,9 @@ function initEditor() {
         if (!isValid) {
           continue
         }
+        e.preventDefault() // 阻止默认粘贴行为
         uploadImage(pasteFile)
+        return // 找到图片后立即返回，不处理其他内容
       }
     }
   })

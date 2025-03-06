@@ -8,7 +8,7 @@ const props = defineProps<{
 
 <template>
   <div class="min-h-[64px]">
-    <Label class="mb-[24px] flex items-center">
+    <Label class="flex items-center">
       <span class="mr-4 min-h-[40px] min-h-4 w-[150px] flex flex-shrink-0 items-center justify-end font-bold" :class="{ required: props.required }">
         {{ props.label }}
       </span>

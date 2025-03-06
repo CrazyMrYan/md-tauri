@@ -15,10 +15,6 @@ function onUpdate(val: boolean) {
     emit(`close`)
   }
 }
-
-const version = process.env.npm_package_version;
-const osName = process.env.TAURI_PLATFORM;
-
 const links = [
   { label: `GitHub`, url: `https://github.com/CrazyMrYan/md-tauri`, icon: `github` },
 ]
@@ -37,8 +33,7 @@ async function onRedirect(url: string) {
         <DialogTitle>关于</DialogTitle>
       </DialogHeader>
       <div>
-        <p>当前版本: v{{ version }}</p>
-        <p>系统信息: {{ osName}}</p>
+        <p>当前版本: v1.0.0-beta.1</p>
       </div>
       <DialogFooter class="sm:justify-evenly">
         <Button
