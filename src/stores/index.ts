@@ -63,7 +63,7 @@ export const useStore = defineStore(`store`, () => {
   const isOpenPostSlider = useStorage(addPrefix(`is_open_post_slider`), false)
   // 内容列表
   const posts = useStorage(addPrefix(`posts`), [{
-    title: `内容1`,
+    title: `Markdown 快速指南`,
     content: DEFAULT_CONTENT,
   }])
   // 当前内容

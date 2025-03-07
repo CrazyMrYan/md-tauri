@@ -16,12 +16,12 @@ watch(isOpen, () => {
 
 function addPost() {
   if (addPostInputVal.value === ``) {
-    toast.error(`内容标题不可为空`)
+    toast.error(`文档标题不可为空`)
     return
   }
   store.addPost(addPostInputVal.value)
   isOpen.value = false
-  toast.success(`内容新增成功`)
+  toast.success(`文档新增成功`)
 }
 
 const editTarget = ref(-1)
@@ -73,14 +73,14 @@ function delPost() {
       <Dialog v-model:open="isOpen">
         <DialogTrigger as-child>
           <Button variant="outline" class="w-full" size="xs">
-            <Plus /> 新增内容
+            <Plus /> 新增文档
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新增内容</DialogTitle>
+            <DialogTitle>新增文档</DialogTitle>
             <DialogDescription>
-              请输入内容名称
+              请输入文档标题
             </DialogDescription>
           </DialogHeader>
           <Input v-model="addPostInputVal" />

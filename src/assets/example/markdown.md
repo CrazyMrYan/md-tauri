@@ -93,11 +93,11 @@ console.log("Hello, CrazyYan!");
 
 Markdown 支持简单的表格，用 `|` 和 `-` 分隔单元格和表头。
 
-| 项目人员                                    | 邮箱                   | 微信号       |
-| ------------------------------------------- | ---------------------- | ------------ |
-| [yanglbme](https://github.com/yanglbme)     | contact@yanglibin.info | YLB0109      |
-| [YangFong](https://github.com/YangFong)     | yangfong2022@gmail.com | yq2419731931 |
-| [thinkasany](https://github.com/thinkasany) | thinkasany@gmail.com   | thinkasany   |
+| 排名 | 品牌   | 数量（万） |
+| ---- | ------ | ---------- |
+| 1    | 比亚迪 | 160.71     |
+| 2    | 大众   | 126.66     |
+| 3    | 奇瑞   | 105.77     |
 
 这样的表格让数据展示更为清爽！
 
@@ -132,7 +132,7 @@ graph LR
   A[GraphCommand] --> B[update]
   A --> C[goto]
   A --> D[send]
-  
+
   B --> B1[更新状态]
   C --> C1[流程控制]
   D --> D1[消息传递]

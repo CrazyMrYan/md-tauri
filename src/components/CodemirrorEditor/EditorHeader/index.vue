@@ -104,6 +104,16 @@ function copy() {
 <template>
   <header class="header-container h-15 flex items-center justify-between px-5 dark:bg-[#191c20]">
     <div class="space-x-2 flex">
+            <TooltipProvider :delay-duration="200">
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="outline" @click="isOpenPostSlider = !isOpenPostSlider">
+              <PanelLeftOpen v-show="!isOpenPostSlider" class="size-4" />
+              <PanelLeftClose v-show="isOpenPostSlider" class="size-4" />
+            </Button>
+          </TooltipTrigger>
+        </Tooltip>
+      </TooltipProvider>
       <Menubar class="menubar">
         <FileDropdown />
 
@@ -141,20 +151,6 @@ function copy() {
     </div>
 
     <div class="space-x-2 flex">
-      <TooltipProvider :delay-duration="200">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button variant="outline" @click="isOpenPostSlider = !isOpenPostSlider">
-              <PanelLeftOpen v-show="!isOpenPostSlider" class="size-4" />
-              <PanelLeftClose v-show="isOpenPostSlider" class="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            {{ isOpenPostSlider ? "关闭" : "内容管理" }}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
       <Button variant="outline" @click="toggleDark()">
         <Moon v-show="isDark" class="size-4" />
         <Sun v-show="!isDark" class="size-4" />
