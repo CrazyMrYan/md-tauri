@@ -81,7 +81,6 @@ const defaultTheme: Theme = {
       'font-style': `normal`,
       'padding': `1em`,
       'border-left': `4px solid var(--md-primary-color)`,
-      'border-radius': `6px`,
       'color': `rgba(0,0,0,0.5)`,
       'background': `var(--blockquote-background)`,
       'margin-bottom': `1em`,
@@ -332,7 +331,6 @@ const graceTheme = toMerged(defaultTheme, {
       'font-style': `italic`,
       'padding': `1em 1em 1em 2em`,
       'border-left': `4px solid var(--md-primary-color)`,
-      'border-radius': `6px`,
       'color': `rgba(0,0,0,0.6)`,
       'box-shadow': `0 4px 6px rgba(0,0,0,0.05)`,
       'margin-bottom': `1em`,
@@ -452,7 +450,6 @@ const simpleTheme = toMerged(defaultTheme, {
     h3: {
       'padding-left': `12px`,
       'font-size': `1.2em`,
-      'border-radius': `6px`,
       'line-height': `2.4em`,
       'border-left': `4px solid var(--md-primary-color)`,
       'border-right': `1px solid color-mix(in srgb, var(--md-primary-color) 10%, transparent)`,
@@ -463,15 +460,12 @@ const simpleTheme = toMerged(defaultTheme, {
 
     h4: {
       'font-size': `1.1em`,
-      'border-radius': `6px`,
     },
 
     h5: {
-      'border-radius': `6px`,
     },
 
     h6: {
-      'border-radius': `6px`,
     },
 
     blockquote: {
