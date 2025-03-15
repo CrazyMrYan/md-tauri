@@ -181,6 +181,7 @@ const codeBlockThemeList = [
   `xt256.min.css`,
 ].sort()
 
+// TODO: 保存本地
 export const codeBlockThemeOptions: IConfigOption[] = codeBlockThemeList.map((codeBlockTheme) => {
   const label = codeBlockTheme.replace(`.min.css`, ``)
   const value = `${codeBlockUrlPrefix}${codeBlockTheme}`
