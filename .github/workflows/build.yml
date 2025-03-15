@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_OPTIONS: "--max-old-space-size=4096"
+  NODE_OPTIONS: "--max-old-space-size=8192"  # 提升内存限制
 
 jobs:
   build:
@@ -33,46 +33,59 @@ jobs:
       with:
         fetch-depth: 0
 
+    # Ubuntu系统依赖安装
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libglib2.0-dev \
+          libgirepository1.0-dev \
+          libcairo2-dev \
+          libpango1.0-dev
+
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
         cache: 'yarn'
 
-    # 新增步骤：强制更新关键依赖
     - name: Update Vulnerable Dependencies
       run: |
         yarn add axios@^1.8.2
         yarn add @babel/runtime-corejs2@^7.26.10 @babel/runtime@^7.26.10
-        # 如果直接依赖中存在旧版本，需要更新父依赖
         yarn upgrade qiniu-js tiny-oss
 
     - name: Install dependencies
       run: |
-        # 使用 --ignore-engines 绕过引擎版本检查（如有需要）
         yarn install --frozen-lockfile --ignore-engines --production=false
 
-    # 优化安全检查逻辑
+    # 跨平台兼容的安全检查
     - name: Security Audit
+      shell: bash  # 强制使用bash解释器
       run: |
-        # 设置允许的漏洞级别（仅允许low）
         yarn audit --groups dependencies --level high
         AUDIT_RESULT=$?
-        # 退出码逻辑: 16=high, 8=moderate, 4=low
-        if [ $AUDIT_RESULT -ge 16 ]; then
-          echo "发现高风险漏洞，必须立即修复！"
+        
+        # 调整退出码处理逻辑
+        if [[ $AUDIT_RESULT -ge 16 ]]; then
+          echo "::error::发现高风险漏洞，必须立即修复！"
           exit 1
-        elif [ $AUDIT_RESULT -ge 8 ]; then
-          echo "发现中风险漏洞，记录但允许继续构建..."
+        elif [[ $AUDIT_RESULT -ge 8 ]]; then
+          echo "::warning::发现中风险漏洞，记录但允许继续构建..."
         else
           echo "无高风险漏洞"
         fi
 
+    # macOS内存优化
     - name: Build application
       shell: bash
-      run: yarn tauri:build
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          export NODE_OPTIONS="--max-old-space-size=8192"
+        fi
+        yarn tauri:build
       env:
-        # Windows 环境需要特别处理
         TAURI_PLATFORM: ${{ matrix.rust-target }}
 
     - name: Package artifacts
@@ -87,10 +100,9 @@ jobs:
           !src-tauri/target/release/*.d
         retention-days: 7
 
-    # Windows 专用处理步骤
+    # Windows专用处理
     - name: Windows Cleanup
       if: runner.os == 'Windows'
       run: |
-        # 清理 Windows 长路径问题
         git config --system core.longpaths true
         Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
