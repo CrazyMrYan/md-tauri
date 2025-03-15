@@ -88,12 +88,27 @@ jobs:
     - name: Build application
       shell: bash
       run: |
+        # macOS专用优化参数
         if [[ "$RUNNER_OS" == "macOS" ]]; then
-          export NODE_OPTIONS="--max-old-space-size=8192"
+          export NODE_OPTIONS="--max-old-space-size=16384"
+          export TAURI_BUILD_ARGS="--features=ci"
         fi
-        yarn tauri:build
+        
+        # Vite构建优化
+        yarn build:only --mode production \
+          --cache-dir .vite-cache \
+          --emptyOutDir \
+          --config vite.config.prod.ts
+        
+        # Tauri构建
+        yarn tauri build --target ${{ matrix.rust-target }}
+      
       env:
+        # 通用环境变量
+        NODE_ENV: production
         TAURI_PLATFORM: ${{ matrix.rust-target }}
+        VITE_DROP_CONSOLE: "true"
+        VITE_SOURCEMAP: "false"
 
     - name: Package artifacts
       run: yarn tauri build --target ${{ matrix.rust-target }}
