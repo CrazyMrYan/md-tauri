@@ -39,10 +39,17 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          libglib2.0-dev \
-          libgirepository1.0-dev \
-          libcairo2-dev \
-          libpango1.0-dev
+          libgtk-3-dev \          # 新增核心GTK3开发库
+          libwebkit2gtk-4.0-dev \ # WebKit GTK支持
+          libappindicator3-dev \  # 系统托盘支持
+          libssl-dev \            # OpenSSL开发头文件
+          libjavascriptcoregtk-4.0-dev \  # JavaScriptCore
+          libayatana-appindicator3-dev \  # 现代系统托盘支持
+          patchelf                # 二进制文件修补工具
+
+        # 验证安装结果
+        pkg-config --list-all | grep -E 'gtk|gdk'
+        ls /usr/lib/x86_64-linux-gnu/pkgconfig/{gtk+-3.0,gdk-3.0}.pc
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
