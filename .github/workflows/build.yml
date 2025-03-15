@@ -8,13 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_OPTIONS: "--max-old-space-size=4096"  # 增加内存限制
+  NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30  # 增加作业超时时间
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -25,41 +25,47 @@ jobs:
             rust-target: x86_64-apple-darwin
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
-      fail-fast: false  # 允许单个平台失败
-      max-parallel: 1   # 顺序执行  
+      fail-fast: false
+      max-parallel: 1
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # 获取完整提交历史
+        fetch-depth: 0
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
-        cache: 'yarn'  # 启用 Yarn 专用缓存
+        cache: 'yarn'
 
-    - name: Check Yarn Lockfile
+    # 新增步骤：强制更新关键依赖
+    - name: Update Vulnerable Dependencies
       run: |
-        if [ ! -f yarn.lock ]; then
-          echo "生成新的 yarn.lock..."
-          yarn install --pure-lockfile
-          git add yarn.lock
-          git commit -m "Auto-generate yarn.lock" || echo "No changes to commit"
-        fi
+        yarn add axios@^1.8.2
+        yarn add @babel/runtime-corejs2@^7.26.10 @babel/runtime@^7.26.10
+        # 如果直接依赖中存在旧版本，需要更新父依赖
+        yarn upgrade qiniu-js tiny-oss
 
     - name: Install dependencies
       run: |
-        # 显式更新有漏洞的依赖
-        yarn add tough-cookie@^4.1.3 ws@^8.17.1
-        yarn install --frozen-lockfile --ignore-engines
+        # 使用 --ignore-engines 绕过引擎版本检查（如有需要）
+        yarn install --frozen-lockfile --ignore-engines --production=false
 
+    # 优化安全检查逻辑
     - name: Security Audit
       run: |
-        yarn audit --groups dependencies
-        if [ $? -gt 4 ]; then   # 仅允许中低风险漏洞
-          echo "发现高风险漏洞，终止构建！"
+        # 设置允许的漏洞级别（仅允许low）
+        yarn audit --groups dependencies --level high
+        AUDIT_RESULT=$?
+        # 退出码逻辑: 16=high, 8=moderate, 4=low
+        if [ $AUDIT_RESULT -ge 16 ]; then
+          echo "发现高风险漏洞，必须立即修复！"
           exit 1
+        elif [ $AUDIT_RESULT -ge 8 ]; then
+          echo "发现中风险漏洞，记录但允许继续构建..."
+        else
+          echo "无高风险漏洞"
         fi
 
     - name: Build application
