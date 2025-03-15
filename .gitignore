@@ -57,4 +57,3 @@ components.d.ts
 web-ext.config.ts
 package-lock.json
 .vscode
-.codebase
