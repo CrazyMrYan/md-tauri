@@ -62,7 +62,7 @@ jobs:
             libayatana-appindicator3-dev
 
     - name: Install project dependencies
-      run: npm ci
+      run: npm install
 
     - name: Build application
       shell: bash
