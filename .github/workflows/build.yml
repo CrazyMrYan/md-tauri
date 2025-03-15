@@ -8,13 +8,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -25,63 +23,37 @@ jobs:
             rust-target: x86_64-apple-darwin
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
-
+      fail-fast: false  # 允许单个平台失败
+      max-parallel: 1   # 顺序执行
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: Setup Node.js with Yarn
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
-        cache: 'yarn'
 
-    # 跨平台锁文件检查（非Windows）
-    - name: Check Yarn Lockfile (Unix)
-      if: runner.os != 'Windows'
-      shell: bash
+    - name: Clean npm cache
+      run: npm cache clean --force
+
+    - name: Set npm timeout
+      run: echo "npm_config_timeout=60000" >> $GITHUB_ENV
+
+    - name: Install project dependencies
       run: |
-        if [ ! -f yarn.lock ]; then
-          echo "生成新的 yarn.lock..."
-          yarn install --pure-lockfile
-          git add yarn.lock
-          git commit -m "Auto-generate yarn.lock" || echo "No changes to commit"
-        fi
-
-    # Windows专用锁文件检查
-    - name: Check Yarn Lockfile (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        if (-not (Test-Path yarn.lock)) {
-          Write-Output "生成新的 yarn.lock..."
-          yarn install --pure-lockfile
-          git add yarn.lock
-          git commit -m "Auto-generate yarn.lock" 
-          if (-not $?) { Write-Output "No changes to commit" }
-        }
-
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile --ignore-engines
-      env:
-        # Windows需要特别设置PATH
-        PATH: ${{ matrix.os == 'windows-latest' && format('{0}\bin;{0}\git\cmd;{1}', env.ProgramFiles, env.PATH) || env.PATH }}
-
-    - name: Security Updates
-      run: yarn add tough-cookie@^4.1.3 ws@^8.17.1
+        npm install --legacy-peer-deps
+        npm audit fix --force
 
     - name: Build application
-      run: yarn tauri:build
-      # 分平台设置环境变量
-      env:
-        TAURI_PLATFORM: ${{ matrix.rust-target }}
-        # Windows需要设置不同PATH
-        PATH: ${{ matrix.os == 'windows-latest' && format('{0}\bin;{0}\git\usr\bin;{1}', env.ProgramFiles, env.PATH) || env.PATH }}
+      shell: bash
+      run: |
+        npm run tauri:build
 
     - name: Package artifacts
-      run: yarn tauri build --target ${{ matrix.rust-target }}
+      run: |
+        npx tauri build --target ${{ matrix.rust-target }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -90,13 +62,3 @@ jobs:
         path: |
           src-tauri/target/release/*
           !src-tauri/target/release/*.d
-
-    # Windows专用清理步骤
-    - name: Windows Fixes
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        # 修复长路径问题
-        git config --global core.longpaths true
-        # 重置文件权限
-        git reset --hard
