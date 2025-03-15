@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/1.x/tooling/cli/schema.json",
+  "build": {
+    "beforeBuildCommand": "npm run build:only",
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "md-tauri",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "dialog": {
+        "all": true
+      },
+      "fs": {
+        "all": true,
+        "scope": ["**"]
+      },
+      "shell": {
+        "open": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "com.tauri.md-editor",
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "",
+      "targets": ["deb", "app", "dmg", "msi"],
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "wix": { "language": "zh-CN" }
+      }
+    },
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": ["script-src", "style-src"]
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 800,
+        "resizable": true,
+        "title": "MD Tauri",
+        "width": 1200,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true
+      }
+    ]
+  }
+}
