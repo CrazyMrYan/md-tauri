@@ -22,52 +22,64 @@ jobs:
           - os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
           - os: macos-latest
-            # 为 macOS 动态设置目标架构
-            rust-target: auto
+            rust-target: x86_64-apple-darwin
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
       fail-fast: false
-      # max-parallel: 1
+      max-parallel: 1
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # Ubuntu 系统依赖安装 (修复依赖冲突)
+    # 设置 macOS 目标架构
+    - name: Setup macOS Rust target
+      if: runner.os == 'macOS'
+      run: |
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "arm64" ]; then
+          echo "TAURI_TARGET=aarch64-apple-darwin" >> $GITHUB_ENV
+          rustup target add aarch64-apple-darwin
+        else
+          echo "TAURI_TARGET=x86_64-apple-darwin" >> $GITHUB_ENV
+          rustup target add x86_64-apple-darwin
+        fi
+
+    # Ubuntu 系统依赖安装 (完全重写)
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        # 移除旧的冲突包（如果存在）
+        # 移除潜在冲突的包
         sudo apt-get remove -y libappindicator3-dev libappindicator3-1 || true
         
-        # Ubuntu 24.04 兼容包安装
+        # 安装 Ubuntu 24.04 (Noble) 兼容的依赖
         sudo apt-get install -y \
           libgtk-3-dev \
           libwebkit2gtk-4.1-dev \
           libayatana-appindicator3-dev \
           libssl-dev \
           libjavascriptcoregtk-4.1-dev \
+          libsoup2.4-dev \
           patchelf
-
-        # 验证安装
-        pkg-config --list-all | grep -E 'gtk|gdk' || echo "No GTK packages found"
-        ls /usr/lib/x86_64-linux-gnu/pkgconfig/gtk+-3.0.pc || echo "GTK pkgconfig file not found"
-
-    # 设置 macOS 构建目标
-    - name: Setup macOS build target
-      if: runner.os == 'macOS'
-      id: macos-target
-      run: |
-        ARCH=$(uname -m)
-        if [ "$ARCH" = "arm64" ]; then
-          echo "RUST_TARGET=aarch64-apple-darwin" >> $GITHUB_ENV
-        else
-          echo "RUST_TARGET=x86_64-apple-darwin" >> $GITHUB_ENV
+        
+        # 如果 libsoup2.4-dev 安装失败，尝试 libsoup-3.0-dev
+        if [ $? -ne 0 ]; then
+          echo "尝试安装替代依赖..."
+          sudo apt-get install -y libsoup-3.0-dev
         fi
-        echo "使用的目标架构: $RUST_TARGET"
-        rustup target add $RUST_TARGET
+
+        # 安装其他可能需要的依赖
+        sudo apt-get install -y \
+          libglib2.0-dev \
+          libatk1.0-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libcairo2-dev
+        
+        # 验证安装
+        pkg-config --list-all | grep -E 'gtk|gdk|soup' || echo "某些依赖可能未正确安装"
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
@@ -75,24 +87,26 @@ jobs:
         node-version: 20.x
         cache: 'yarn'
 
-    # 修复 Windows 图标
-    - name: Fix Windows Icon
+    # 简化的 Windows 图标检查 - 如果不存在则抛出错误
+    - name: Verify Windows Icon
       if: runner.os == 'Windows'
       run: |
-        # 如果目录不存在则创建
-        if (!(Test-Path -Path "src-tauri/icons")) {
-          New-Item -ItemType Directory -Force -Path "src-tauri/icons"
+        # 检查图标文件是否存在
+        if (!(Test-Path -Path "src-tauri/icons/icon.ico") -and !(Test-Path -Path "public/favicon.ico")) {
+          Write-Error "无法找到必要的图标文件 (src-tauri/icons/icon.ico 或 public/favicon.ico)"
+          exit 1
         }
         
-        # 下载一个有效的标准格式图标文件
-        Invoke-WebRequest -Uri "https://github.com/tauri-apps/tauri/raw/dev/examples/api/icons/icon.ico" -OutFile "src-tauri/icons/icon.ico"
-        
-        # 检查文件是否存在
-        if (Test-Path -Path "src-tauri/icons/icon.ico") {
-          Write-Host "图标文件已成功下载"
+        # 如果主图标不存在，但 public/favicon.ico 存在，则复制
+        if (!(Test-Path -Path "src-tauri/icons/icon.ico") -and (Test-Path -Path "public/favicon.ico")) {
+          # 确保目录存在
+          if (!(Test-Path -Path "src-tauri/icons")) {
+            New-Item -ItemType Directory -Force -Path "src-tauri/icons"
+          }
+          Copy-Item -Path "public/favicon.ico" -Destination "src-tauri/icons/icon.ico" -Force
+          Write-Host "已从 public/favicon.ico 复制图标"
         } else {
-          Write-Error "无法下载图标文件"
-          exit 1
+          Write-Host "图标文件已存在"
         }
 
     - name: Update Vulnerable Dependencies
@@ -118,35 +132,50 @@ jobs:
         # 平台特定的优化
         if [[ "$RUNNER_OS" == "macOS" ]]; then
           export NODE_OPTIONS="--max-old-space-size=24576"
-          # 使用动态检测的目标架构
-          export TAURI_PLATFORM="${{ env.RUST_TARGET }}"
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
           export NODE_OPTIONS="--max-old-space-size=12288"
-          export TAURI_PLATFORM="${{ matrix.rust-target }}"
         else
           export NODE_OPTIONS="--max-old-space-size=8192"
-          export TAURI_PLATFORM="${{ matrix.rust-target }}"
         fi
         
         echo "Building with NODE_OPTIONS: $NODE_OPTIONS"
-        echo "Building with TAURI_PLATFORM: $TAURI_PLATFORM"
         
         # 使用正确的 Vite 构建命令
         yarn build:only --mode production
-        
-        # Tauri 构建 - macOS 特殊处理
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
-          yarn tauri build --target $TAURI_PLATFORM
-        else
-          yarn tauri build --target $TAURI_PLATFORM
-        fi
       
       env:
         # 通用环境变量
         NODE_ENV: production
         VITE_DROP_CONSOLE: "true"
         VITE_SOURCEMAP: "false"
-        RUST_BACKTRACE: "1"  # 添加更详细的错误信息
+
+    # 分离 Tauri 构建步骤以便针对不同平台做特殊处理
+    - name: Build Tauri App (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        echo "使用目标架构: $TAURI_TARGET"
+        yarn tauri build --target $TAURI_TARGET
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
+
+    - name: Build Tauri App (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        # 设置额外的环境变量以帮助构建过程找到库
+        export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+        yarn tauri build --target ${{ matrix.rust-target }}
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
+
+    - name: Build Tauri App (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        yarn tauri build --target ${{ matrix.rust-target }}
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -155,6 +184,7 @@ jobs:
         path: |
           src-tauri/target/release/*
           !src-tauri/target/release/*.d
+          src-tauri/target/${{ env.TAURI_TARGET }}/release/* 
         retention-days: 7
 
     # Windows 特定清理
