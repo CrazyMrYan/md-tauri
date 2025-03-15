@@ -8,11 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  NODE_OPTIONS: "--max-old-space-size=4096"  # 增加内存限制
 
 jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30  # 增加作业超时时间
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -24,36 +26,51 @@ jobs:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
       fail-fast: false  # 允许单个平台失败
-      max-parallel: 1   # 顺序执行
-      
+      max-parallel: 1   # 顺序执行  
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整提交历史
 
-    - name: Setup Node.js
+    - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
+        cache: 'yarn'  # 启用 Yarn 专用缓存
 
-    - name: Clean npm cache
-      run: npm cache clean --force
-
-    - name: Set npm timeout
-      run: echo "npm_config_timeout=60000" >> $GITHUB_ENV
-
-    - name: Install project dependencies
+    - name: Check Yarn Lockfile
       run: |
-        npm install --legacy-peer-deps
-        npm audit fix --force
+        if [ ! -f yarn.lock ]; then
+          echo "生成新的 yarn.lock..."
+          yarn install --pure-lockfile
+          git add yarn.lock
+          git commit -m "Auto-generate yarn.lock" || echo "No changes to commit"
+        fi
+
+    - name: Install dependencies
+      run: |
+        # 显式更新有漏洞的依赖
+        yarn add tough-cookie@^4.1.3 ws@^8.17.1
+        yarn install --frozen-lockfile --ignore-engines
+
+    - name: Security Audit
+      run: |
+        yarn audit --groups dependencies
+        if [ $? -gt 4 ]; then   # 仅允许中低风险漏洞
+          echo "发现高风险漏洞，终止构建！"
+          exit 1
+        fi
 
     - name: Build application
       shell: bash
-      run: |
-        npm run tauri:build
+      run: yarn tauri:build
+      env:
+        # Windows 环境需要特别处理
+        TAURI_PLATFORM: ${{ matrix.rust-target }}
 
     - name: Package artifacts
-      run: |
-        npx tauri build --target ${{ matrix.rust-target }}
+      run: yarn tauri build --target ${{ matrix.rust-target }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -62,3 +79,12 @@ jobs:
         path: |
           src-tauri/target/release/*
           !src-tauri/target/release/*.d
+        retention-days: 7
+
+    # Windows 专用处理步骤
+    - name: Windows Cleanup
+      if: runner.os == 'Windows'
+      run: |
+        # 清理 Windows 长路径问题
+        git config --system core.longpaths true
+        Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
