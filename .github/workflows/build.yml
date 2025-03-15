@@ -5,6 +5,21 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # 添加手动触发选项
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: '创建发布版本'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      version_tag:
+        description: '版本标签 (例如: v1.0.0)'
+        required: false
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,7 +41,7 @@ jobs:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
       fail-fast: false
-      max-parallel: 1
+      # max-parallel: 1
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -46,7 +61,7 @@ jobs:
           rustup target add x86_64-apple-darwin
         fi
 
-    # Ubuntu 系统依赖安装 (完全重写)
+    # Ubuntu 系统依赖安装 (修复 javascriptcoregtk 问题)
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
@@ -57,10 +72,12 @@ jobs:
         # 安装 Ubuntu 24.04 (Noble) 兼容的依赖
         sudo apt-get install -y \
           libgtk-3-dev \
+          libwebkit2gtk-4.0-dev \
           libwebkit2gtk-4.1-dev \
+          libjavascriptcoregtk-4.0-dev \
+          libjavascriptcoregtk-4.1-dev \
           libayatana-appindicator3-dev \
           libssl-dev \
-          libjavascriptcoregtk-4.1-dev \
           libsoup2.4-dev \
           patchelf
         
@@ -79,7 +96,11 @@ jobs:
           libcairo2-dev
         
         # 验证安装
-        pkg-config --list-all | grep -E 'gtk|gdk|soup' || echo "某些依赖可能未正确安装"
+        pkg-config --list-all | grep -E 'gtk|gdk|soup|javascript' || echo "某些依赖可能未正确安装"
+        
+        # 显示 PKG_CONFIG_PATH 和已安装的包
+        echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+        ls -la /usr/lib/x86_64-linux-gnu/pkgconfig/ | grep -E 'javascript|webkit'
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
@@ -164,6 +185,13 @@ jobs:
       run: |
         # 设置额外的环境变量以帮助构建过程找到库
         export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+        # 检查是否安装了正确的包
+        pkg-config --list-all | grep -E 'javascript|webkit'
+        # 尝试确定需要哪个版本的 javascriptcoregtk
+        pkg-config --modversion javascriptcoregtk-4.0 || echo "javascriptcoregtk-4.0 not found"
+        pkg-config --modversion javascriptcoregtk-4.1 || echo "javascriptcoregtk-4.1 not found"
+        # 设置环境变量以优先使用可用的版本
+        export JAVASCRIPTCOREGTK_4_0_NO_PKG_CONFIG=1
         yarn tauri build --target ${{ matrix.rust-target }}
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
@@ -177,12 +205,69 @@ jobs:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
 
+    # 获取包版本信息
+    - name: Get Package Version
+      id: package-version
+      shell: bash
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Package version: $VERSION"
+    
+    # 重命名生成的安装包以包含版本号
+    - name: Rename Artifacts with Version
+      shell: bash
+      run: |
+        VERSION="${{ steps.package-version.outputs.version }}"
+        OS="${{ runner.os }}"
+        
+        if [[ "$OS" == "Linux" ]]; then
+          ARTIFACTS_DIR="src-tauri/target/release/bundle"
+          if [[ -d "$ARTIFACTS_DIR/deb" ]]; then
+            for file in $ARTIFACTS_DIR/deb/*.deb; do
+              newname=$(echo $file | sed "s/\.deb/-$VERSION.deb/")
+              mv "$file" "$newname"
+              echo "Renamed $file to $newname"
+            done
+          fi
+          if [[ -d "$ARTIFACTS_DIR/appimage" ]]; then
+            for file in $ARTIFACTS_DIR/appimage/*.AppImage; do
+              newname=$(echo $file | sed "s/\.AppImage/-$VERSION.AppImage/")
+              mv "$file" "$newname"
+              echo "Renamed $file to $newname"
+            done
+          fi
+        elif [[ "$OS" == "Windows" ]]; then
+          ARTIFACTS_DIR="src-tauri/target/release/bundle"
+          if [[ -d "$ARTIFACTS_DIR/msi" ]]; then
+            for file in $ARTIFACTS_DIR/msi/*.msi; do
+              newname=$(echo $file | sed "s/\.msi/-$VERSION.msi/")
+              mv "$file" "$newname"
+              echo "Renamed $file to $newname"
+            done
+          fi
+        elif [[ "$OS" == "macOS" ]]; then
+          ARTIFACTS_DIR="src-tauri/target/release/bundle"
+          if [[ -d "$ARTIFACTS_DIR/dmg" ]]; then
+            for file in $ARTIFACTS_DIR/dmg/*.dmg; do
+              newname=$(echo $file | sed "s/\.dmg/-$VERSION.dmg/")
+              mv "$file" "$newname"
+              echo "Renamed $file to $newname"
+            done
+          fi
+        fi
+
+    # 上传构建产物
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: release-${{ matrix.os }}
         path: |
-          src-tauri/target/release/*
+          src-tauri/target/release/bundle/deb/*.deb
+          src-tauri/target/release/bundle/appimage/*.AppImage
+          src-tauri/target/release/bundle/msi/*.msi
+          src-tauri/target/release/bundle/dmg/*.dmg
+          src-tauri/target/release/*.exe
           !src-tauri/target/release/*.d
           src-tauri/target/${{ env.TAURI_TARGET }}/release/* 
         retention-days: 7
@@ -193,3 +278,76 @@ jobs:
       run: |
         git config --system core.longpaths true
         Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+
+  # 添加发布作业
+  create-release:
+    name: Create Release
+    if: github.event.inputs.create_release == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # 获取包版本信息
+      - name: Get Package Version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Package version: $VERSION"
+      
+      # 下载所有构建产物
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      
+      # 列出下载的文件
+      - name: List Downloaded Files
+        run: |
+          find artifacts -type f | sort
+      
+      # 创建版本标签
+      - name: Create Tag
+        id: create_tag
+        run: |
+          TAG_NAME="${{ github.event.inputs.version_tag }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME="v${{ steps.package-version.outputs.version }}"
+          fi
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+      
+      # 创建 GitHub Release
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag_name }}
+          name: Release ${{ steps.create_tag.outputs.tag_name }}
+          body: |
+            # 发布说明
+            
+            MD Markdown 编辑器版本 ${{ steps.package-version.outputs.version }}
+            
+            ## 变更内容
+            
+            - 自动构建于 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - 编译时间: $(date '+%Y-%m-%d %H:%M:%S')
+            
+            ## 安装包
+            
+            - Windows: .msi 安装包
+            - macOS: .dmg 安装包
+            - Linux: .deb 和 .AppImage 安装包
+          draft: true
+          prerelease: false
+          files: |
+            artifacts/**/*.deb
+            artifacts/**/*.AppImage
+            artifacts/**/*.msi
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
