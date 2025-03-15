@@ -47,7 +47,7 @@ public/upload/**
 .history
 
 # Package manager lock file
-yarn.lock
+# yarn.lock
 pnpm-lock.yaml
 auto-imports.d.ts
 components.d.ts
