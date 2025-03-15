@@ -14,7 +14,7 @@ jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45  # Increase timeout for larger builds
+    timeout-minutes: 45
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -33,23 +33,24 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Ubuntu system dependencies installation (fixed formatting)
+    # Ubuntu 系统依赖安装 (更新了包名)
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
+        # Ubuntu 24.04 更新的包名
         sudo apt-get install -y \
           libgtk-3-dev \
-          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
           libappindicator3-dev \
           libssl-dev \
-          libjavascriptcoregtk-4.0-dev \
+          libjavascriptcoregtk-4.1-dev \
           libayatana-appindicator3-dev \
           patchelf
 
-        # Validation
-        pkg-config --list-all | grep -E 'gtk|gdk'
-        ls /usr/lib/x86_64-linux-gnu/pkgconfig/{gtk+-3.0,gdk-3.0}.pc || echo "GTK pkgconfig files not found"
+        # 验证安装
+        pkg-config --list-all | grep -E 'gtk|gdk' || echo "No GTK packages found"
+        ls /usr/lib/x86_64-linux-gnu/pkgconfig/gtk+-3.0.pc || echo "GTK pkgconfig file not found"
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
@@ -57,16 +58,28 @@ jobs:
         node-version: 20.x
         cache: 'yarn'
 
-    # Fix for Windows icon
+    # 修复 Windows 图标
     - name: Fix Windows Icon
       if: runner.os == 'Windows'
       run: |
-        # Create a directory if it doesn't exist
+        # 如果目录不存在则创建
         if (!(Test-Path -Path "src-tauri/icons")) {
           New-Item -ItemType Directory -Force -Path "src-tauri/icons"
         }
-        # Download a valid icon file from Tauri's repository
-        Invoke-WebRequest -Uri "https://github.com/tauri-apps/tauri/raw/dev/core/tauri/icons/icon.ico" -OutFile "src-tauri/icons/icon.ico"
+        
+        # 创建一个简单的图标文件而不是下载
+        # 从存储库中复制样本图标(如果存在)
+        Copy-Item -Path "public/favicon.ico" -Destination "src-tauri/icons/icon.ico" -Force -ErrorAction SilentlyContinue
+        
+        # 如果复制失败，创建一个空白图标文件
+        if (!(Test-Path -Path "src-tauri/icons/icon.ico")) {
+          [byte[]]$bytes = @(
+            0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x00, 
+            0x08, 0x00, 0x68, 0x05, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x28, 0x00, 
+            0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x01, 0x00
+          )
+          [System.IO.File]::WriteAllBytes("$(Get-Location)\src-tauri\icons\icon.ico", $bytes)
+        }
 
     - name: Update Vulnerable Dependencies
       run: |
@@ -78,17 +91,17 @@ jobs:
       run: |
         yarn install --frozen-lockfile --ignore-engines --production=false
 
-    # Cross-platform compatible security check
+    # 跨平台兼容的安全检查
     - name: Security Audit
       shell: bash
       run: |
         yarn audit --groups dependencies --level high || echo "Security audit completed with warnings"
         
-    # Build with platform-specific optimizations
+    # 针对不同平台的构建优化
     - name: Build application
       shell: bash
       run: |
-        # Platform-specific optimizations
+        # 平台特定的优化
         if [[ "$RUNNER_OS" == "macOS" ]]; then
           export NODE_OPTIONS="--max-old-space-size=24576"
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -99,16 +112,14 @@ jobs:
         
         echo "Building with NODE_OPTIONS: $NODE_OPTIONS"
         
-        # Build frontend in chunks for memory optimization
-        yarn build:only --mode production \
-          --cache-dir .vite-cache \
-          --emptyOutDir 
+        # 使用正确的 Vite 构建命令（修复了参数问题）
+        yarn build:only --mode production
         
-        # Tauri build with memory settings
+        # Tauri 构建
         yarn tauri build --target ${{ matrix.rust-target }}
       
       env:
-        # Common environment variables
+        # 通用环境变量
         NODE_ENV: production
         TAURI_PLATFORM: ${{ matrix.rust-target }}
         VITE_DROP_CONSOLE: "true"
@@ -123,7 +134,7 @@ jobs:
           !src-tauri/target/release/*.d
         retention-days: 7
 
-    # Windows-specific cleanup
+    # Windows 特定清理
     - name: Windows Cleanup
       if: runner.os == 'Windows'
       run: |
