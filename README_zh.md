@@ -16,6 +16,24 @@
 - 🎯 自定义主题和 CSS 样式
 - 📤 导入/导出功能
 
+## 安装包
+
+### MacOS
+
+[MD Tauri v1.0.0](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.0.0-beta.1#:~:text=md%2Dtauri_1.0.0_aarch64.dmg)
+
+## 预览效果截图
+
+![应用默认](./public/assets/images/Snipaste_2025-03-07_14-10-08.png)
+
+![应用黑暗主题](./public/assets/images/Snipaste_2025-03-07_14-11-26.png)
+
+![自定义效果主题](./public/assets/images/Snipaste_2025-03-07_14-12-20.png)
+
+![图床配置](./public/assets/images/Snipaste_2025-03-07_14-12-58.png)
+
+![支持VuePress](./public/assets/images/Snipaste_2025-03-07_14-16-31.png)
+
 ## 开发设置
 
 ### 环境要求
@@ -83,4 +101,4 @@ npm run tauri:build
 
 ## 开源协议
 
-本项目采用 [MIT 协议](LICENSE) 开源。 
+本项目采用 [MIT 协议](LICENSE) 开源。

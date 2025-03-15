@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { useStore } from '@/stores'
-import { Edit3, Ellipsis, Plus, Trash } from 'lucide-vue-next'
-import { ref, watch } from 'vue'
-import { toast } from 'vue-sonner'
-
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 // UI 组件导入
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useStore } from '@/stores'
+import { Edit3, Ellipsis, Plus, Trash } from 'lucide-vue-next'
+import { ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 const store = useStore()
 
@@ -19,21 +19,21 @@ const isOpen = ref(false)
 const addPostInputVal = ref(``)
 const isVuepressFormat = ref(false)
 const postDate = ref(new Date().toISOString())
-const postTags = ref([''])
-const postMeta = ref([{ name: '', content: '' }])
+const postTags = ref([``])
+const postMeta = ref([{ name: ``, content: `` }])
 
 watch(isOpen, () => {
   if (isOpen.value) {
     addPostInputVal.value = ``
     isVuepressFormat.value = false
     postDate.value = new Date().toISOString()
-    postTags.value = ['']
-    postMeta.value = [{ name: '', content: '' }]
+    postTags.value = [``]
+    postMeta.value = [{ name: ``, content: `` }]
   }
 })
 
 function addTag() {
-  postTags.value.push('')
+  postTags.value.push(``)
 }
 
 function removeTag(index: number) {
@@ -41,7 +41,7 @@ function removeTag(index: number) {
 }
 
 function addMetaItem() {
-  postMeta.value.push({ name: '', content: '' })
+  postMeta.value.push({ name: ``, content: `` })
 }
 
 function removeMetaItem(index: number) {
@@ -49,33 +49,33 @@ function removeMetaItem(index: number) {
 }
 
 function generateVuepressContent(title: string) {
-  let content = '---\n'
+  let content = `---\n`
   content += `title: "${title}"\n`
   content += `date: ${postDate.value}\n`
-  
-  if (postTags.value.length > 0 && postTags.value[0] !== '') {
-    content += 'tags: \n'
-    postTags.value.forEach(tag => {
-      if (tag.trim() !== '') {
+
+  if (postTags.value.length > 0 && postTags.value[0] !== ``) {
+    content += `tags: \n`
+    postTags.value.forEach((tag) => {
+      if (tag.trim() !== ``) {
         content += `  - ${tag}\n`
       }
     })
   }
-  
-  if (postMeta.value.length > 0 && postMeta.value[0].name !== '') {
-    content += 'head:\n'
-    postMeta.value.forEach(meta => {
-      if (meta.name.trim() !== '' && meta.content.trim() !== '') {
+
+  if (postMeta.value.length > 0 && postMeta.value[0].name !== ``) {
+    content += `head:\n`
+    postMeta.value.forEach((meta) => {
+      if (meta.name.trim() !== `` && meta.content.trim() !== ``) {
         content += `  - - meta\n`
         content += `    - name: ${meta.name}\n`
         content += `      content: ${meta.content}\n`
       }
     })
   }
-  
-  content += '---\n\n'
+
+  content += `---\n\n`
   content += `# ${title}`
-  
+
   return content
 }
 
@@ -84,18 +84,19 @@ function addPost() {
     toast.error(`文档标题不可为空`)
     return
   }
-  
+
   if (isVuepressFormat.value) {
     const content = generateVuepressContent(addPostInputVal.value)
     store.posts.push({
       title: addPostInputVal.value,
-      content: content
+      content,
     })
     store.currentPostIndex = store.posts.length - 1
-  } else {
+  }
+  else {
     store.addPost(addPostInputVal.value)
   }
-  
+
   isOpen.value = false
   toast.success(`文档新增成功`)
 }
@@ -152,63 +153,73 @@ function delPost() {
             <Plus /> 新增文档
           </Button>
         </DialogTrigger>
-        <DialogContent class="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent class="max-h-[80vh] flex flex-col sm:max-w-[500px]">
+          <DialogHeader class="flex-shrink-0">
             <DialogTitle>新增文档</DialogTitle>
             <DialogDescription>
               请输入文档标题和选择文档格式
             </DialogDescription>
           </DialogHeader>
-          
-          <div class="space-y-4">
+
+          <div class="space-y-4 flex-1 overflow-y-auto px-1">
             <div class="space-y-2">
               <Label for="title">文档标题</Label>
               <Input id="title" v-model="addPostInputVal" placeholder="请输入文档标题" />
             </div>
-            
-            <div class="flex items-center space-x-2">
-              <input type="checkbox" id="format" v-model="isVuepressFormat" class="rounded border-gray-300 text-primary focus:ring-primary" />
+
+            <div class="space-x-2 flex items-center">
+              <input id="format" v-model="isVuepressFormat" type="checkbox" class="text-primary focus:ring-primary border-gray-300 rounded">
               <Label for="format">使用 VuePress 格式</Label>
             </div>
-            
-            <div v-if="isVuepressFormat" class="space-y-4 border p-3 rounded-md">
+
+            <div v-if="isVuepressFormat" class="space-y-4 border rounded-md p-3">
               <div class="space-y-2">
                 <Label for="date">发布日期</Label>
                 <Input id="date" v-model="postDate" type="datetime-local" />
               </div>
-              
+
               <div class="space-y-2">
-                <Label class="flex justify-between">
-                  <span>标签</span>
-                  <Button variant="outline" size="xs" @click="addTag">添加标签</Button>
-                </Label>
-                <div v-for="(tag, index) in postTags" :key="index" class="flex items-center gap-2 mb-2">
-                  <Input v-model="postTags[index]" placeholder="输入标签" class="flex-1" />
-                  <Button v-if="postTags.length > 1" variant="destructive" size="icon" class="min-w-8 flex-shrink-0" @click="removeTag(index)">
-                    <Trash class="size-4" />
+                <div class="mb-2 flex items-center justify-between">
+                  <Label>标签</Label>
+                  <Button variant="outline" size="xs" @click="addTag">
+                    添加标签
                   </Button>
                 </div>
+                <div v-for="(tag, index) in postTags" :key="index" class="mb-2 flex items-center gap-2">
+                  <Input v-model="postTags[index]" placeholder="输入标签" class="flex-1" />
+                  <div class="text-inherit">
+                    <Button v-if="postTags.length > 1" variant="outline" size="icon" class="min-w-8 flex-shrink-0" @click="removeTag(index)">
+                      <Trash class="size-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-              
+
               <div class="space-y-2">
-                <Label class="flex justify-between">
-                  <span>Meta 信息</span>
-                  <Button variant="outline" size="xs" @click="addMetaItem">添加 Meta</Button>
-                </Label>
-                <div v-for="(meta, index) in postMeta" :key="index" class="flex items-center gap-2 mb-2">
+                <div class="mb-2 flex items-center justify-between">
+                  <Label>Meta 信息</Label>
+                  <Button variant="outline" size="xs" @click="addMetaItem">
+                    添加 Meta
+                  </Button>
+                </div>
+                <div v-for="(meta, index) in postMeta" :key="index" class="mb-2 flex items-center gap-2">
                   <Input v-model="postMeta[index].name" placeholder="名称 (如 keywords)" class="flex-1" />
                   <Input v-model="postMeta[index].content" placeholder="内容" class="flex-1" />
-                  <Button v-if="postMeta.length > 1" variant="destructive" size="icon" class="min-w-8 flex-shrink-0" @click="removeMetaItem(index)">
+                  <Button v-if="postMeta.length > 1" variant="outline" size="icon" class="min-w-8 flex-shrink-0" @click="removeMetaItem(index)">
                     <Trash class="size-4" />
                   </Button>
                 </div>
               </div>
             </div>
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" @click="isOpen = false">取消</Button>
-            <Button @click="addPost()">确定</Button>
+
+          <DialogFooter class="flex-shrink-0">
+            <Button variant="outline" @click="isOpen = false">
+              取消
+            </Button>
+            <Button @click="addPost()">
+              确定
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

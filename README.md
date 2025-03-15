@@ -16,6 +16,24 @@ A modern Markdown editor built with Tauri and Vue 3, providing a seamless deskto
 - 🎯 Custom theme and CSS styling
 - 📤 Import/Export functionality
 
+## Installation Package
+
+### MacOS
+
+[MD Tauri v1.0.0](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.0.0-beta.1#:~:text=md%2Dtauri_1.0.0_aarch64.dmg)
+
+## Preview Screenshots
+
+![Default App](./public/assets/images/Snipaste_2025-03-07_14-10-08.png)
+
+![Dark Theme](./public/assets/images/Snipaste_2025-03-07_14-11-26.png)
+
+![Custom Theme](./public/assets/images/Snipaste_2025-03-07_14-12-20.png)
+
+![Image Hosting Configuration](./public/assets/images/Snipaste_2025-03-07_14-12-58.png)
+
+![VuePress Support](./public/assets/images/Snipaste_2025-03-07_14-16-31.png)
+
 ## Development Setup
 
 ### Prerequisites
@@ -83,4 +101,4 @@ This will create platform-specific binaries in the `src-tauri/target/release` di
 
 ## License
 
-This project is open source and available under the [MIT License](LICENSE). 
+This project is open source and available under the [MIT License](LICENSE).
