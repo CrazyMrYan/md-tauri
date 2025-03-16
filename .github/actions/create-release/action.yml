@@ -37,9 +37,24 @@ runs:
         BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
         
+        # 检查构建产物目录是否存在
+        if [ ! -d "artifacts" ]; then
+          echo "错误: 构建产物目录不存在，这可能表明构建过程失败或构建产物未被正确上传"
+          exit 1
+        fi
+        
         # 列出下载的构建产物
         echo "找到以下构建产物:"
-        find artifacts -type f | sort
+        find artifacts -type f -name "*.dmg" -o -name "*.msi" -o -name "*.deb" -o -name "*.AppImage" | sort
+        
+        # 检查是否找到了任何构建产物
+        ARTIFACTS_COUNT=$(find artifacts -type f -name "*.dmg" -o -name "*.msi" -o -name "*.deb" -o -name "*.AppImage" | wc -l)
+        if [ "$ARTIFACTS_COUNT" -eq 0 ]; then
+          echo "警告: 没有找到任何构建产物文件，检查上传路径是否正确"
+          # 列出所有文件以便调试
+          echo "artifacts目录中的所有文件:"
+          find artifacts -type f | sort
+        fi
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -54,3 +69,4 @@ runs:
           artifacts/**/*.msi
           artifacts/**/*.deb
           artifacts/**/*.AppImage
+        fail_on_unmatched_files: false
