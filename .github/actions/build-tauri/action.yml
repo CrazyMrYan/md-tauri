@@ -29,6 +29,9 @@ runs:
       shell: bash
       run: |
         export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+        # 安装javascriptcoregtk-4.0依赖
+        sudo apt-get update
+        sudo apt-get install -y libjavascriptcoregtk-4.0-dev
         # 确保javascriptcoregtk-4.0能被正确找到
         pkg-config --exists javascriptcoregtk-4.0 || echo "javascriptcoregtk-4.0 not found in PKG_CONFIG_PATH"
         yarn tauri build --target ${{ inputs.rust-target }}
@@ -41,13 +44,13 @@ runs:
       if: inputs.os == 'Windows'
       shell: bash
       run: |
-        # 在构建前运行图标转换脚本
-        node src-tauri/build-aux/convert_icon.js
+        # 在构建前运行图标转换脚本（使用.cjs扩展名）
+        node src-tauri/build-aux/convert_icon.cjs
         # 如果转换失败，尝试安装ImageMagick并重试
         if [ $? -ne 0 ] && command -v choco &> /dev/null; then
           echo "尝试安装ImageMagick并重试转换..."
           choco install imagemagick -y
-          node src-tauri/build-aux/convert_icon.js
+          node src-tauri/build-aux/convert_icon.cjs
         fi
         yarn tauri build --target ${{ inputs.rust-target }}
       env:
