@@ -29,9 +29,9 @@ runs:
       shell: bash
       run: |
         export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
-        # 安装javascriptcoregtk-4.1和webkit2gtk-4.0依赖
+        # 安装javascriptcoregtk-4.1和webkit2gtk-4.1依赖
         sudo apt-get update
-        sudo apt-get install -y libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.0-dev
+        sudo apt-get install -y libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
         # 创建从javascriptcoregtk-4.1到javascriptcoregtk-4.0的软链接
         if [ -f /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc ]; then
           sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
