@@ -35,11 +35,31 @@ runs:
         # 创建从javascriptcoregtk-4.1到javascriptcoregtk-4.0的软链接
         if [ -f /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc ]; then
           sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
+          # 创建实际库文件的软链接
+          for lib in /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so*; do
+            if [ -f "$lib" ]; then
+              target_lib="${lib/4.1/4.0}"
+              sudo ln -sf "$lib" "$target_lib"
+              echo "Created symlink: $lib -> $target_lib"
+            fi
+          done
         fi
         # 创建从webkit2gtk-4.1到webkit2gtk-4.0的软链接
         if [ -f /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc ]; then
           sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
+          # 创建实际库文件的软链接
+          for lib in /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so*; do
+            if [ -f "$lib" ]; then
+              target_lib="${lib/4.1/4.0}"
+              sudo ln -sf "$lib" "$target_lib"
+              echo "Created symlink: $lib -> $target_lib"
+            fi
+          done
         fi
+        # 显示库文件位置以便调试
+        echo "Checking library files:"
+        ls -la /usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4*.so* || echo "No JavaScriptCoreGTK libraries found"
+        ls -la /usr/lib/x86_64-linux-gnu/libwebkit2gtk-4*.so* || echo "No WebKit2GTK libraries found"
         # 确保javascriptcoregtk-4.1能被正确找到
         pkg-config --exists javascriptcoregtk-4.1 || echo "javascriptcoregtk-4.1 not found in PKG_CONFIG_PATH"
         # 检查javascriptcoregtk-4.0是否可以被找到
