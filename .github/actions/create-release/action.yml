@@ -32,7 +32,6 @@ runs:
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
-      shell: bash
       with:
         tag_name: ${{ steps.create_tag.outputs.tag_name }}
         name: Release ${{ steps.create_tag.outputs.tag_name }}
