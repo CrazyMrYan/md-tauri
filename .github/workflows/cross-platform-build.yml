@@ -1,4 +1,4 @@
-# .github/workflows/build.yml - 主工作流文件
+# .github/workflows/cross-platform-build.yml - 主工作流文件
 name: Cross-Platform Build
 
 on:

@@ -45,18 +45,43 @@ runs:
             done
             ;;
           macOS)
-            for file in $ARTIFACTS_DIR/dmg/*.dmg; do
-              if [ -f "$file" ]; then
-                # 获取文件名（不含路径和扩展名）
-                filename=$(basename "$file" .dmg)
-                # 确保目标目录存在
-                mkdir -p "$ARTIFACTS_DIR/dmg"
-                # 重命名文件，确保使用正确的文件名格式
-                mv "$file" "$ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
-                echo "Renamed DMG file to: $ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
-              else
-                echo "Warning: DMG file not found at $file"
+            # 首先检查DMG目录是否存在
+            if [ ! -d "$ARTIFACTS_DIR/dmg" ]; then
+              echo "错误: DMG目录不存在: $ARTIFACTS_DIR/dmg"
+              # 检查整个bundle目录结构
+              echo "检查bundle目录结构:"
+              find "$ARTIFACTS_DIR" -type d | sort
+              echo "检查是否有DMG文件在其他位置:"
+              find "$ARTIFACTS_DIR" -name "*.dmg" | sort
+            fi
+            
+            # 查找DMG文件
+            DMG_FILES=$(find "$ARTIFACTS_DIR" -name "*.dmg")
+            if [ -z "$DMG_FILES" ]; then
+              echo "错误: 没有找到任何DMG文件"
+              # 检查app目录是否存在，这是DMG文件的源
+              if [ -d "$ARTIFACTS_DIR/macos" ]; then
+                echo "找到macos目录，内容如下:"
+                ls -la "$ARTIFACTS_DIR/macos"
               fi
-            done
+              if [ -d "$ARTIFACTS_DIR/app" ]; then
+                echo "找到app目录，内容如下:"
+                ls -la "$ARTIFACTS_DIR/app"
+              fi
+            else
+              echo "找到以下DMG文件:"
+              echo "$DMG_FILES"
+              
+              # 确保dmg目录存在
+              mkdir -p "$ARTIFACTS_DIR/dmg"
+              
+              # 处理每个找到的DMG文件
+              for file in $DMG_FILES; do
+                filename=$(basename "$file" .dmg)
+                target_file="$ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
+                echo "重命名: $file -> $target_file"
+                mv "$file" "$target_file"
+              done
+            fi
             ;;
         esac
