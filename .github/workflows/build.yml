@@ -5,7 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # 添加手动触发选项
   workflow_dispatch:
     inputs:
       create_release:
@@ -41,14 +40,14 @@ jobs:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
       fail-fast: false
-      # max-parallel: 1
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # 设置 macOS 目标架构
+    # macOS 架构设置
     - name: Setup macOS Rust target
       if: runner.os == 'macOS'
       run: |
@@ -61,77 +60,61 @@ jobs:
           rustup target add x86_64-apple-darwin
         fi
 
-    # Ubuntu 系统依赖安装 (修复 javascriptcoregtk 问题)
+    # Linux 依赖修复
     - name: Install Linux Dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        # 移除潜在冲突的包
         sudo apt-get remove -y libappindicator3-dev libappindicator3-1 || true
         
-        # 安装更新的依赖
+        # 安装核心依赖
         sudo apt-get install -y \
           libgtk-3-dev \
           libwebkit2gtk-4.1-dev \
           libjavascriptcoregtk-4.1-dev \
           libayatana-appindicator3-dev \
+          libsoup2.4-dev \
+          libsoup2.4-1 \
           libssl-dev \
-          patchelf
-        
-        # 安装其他可能需要的依赖
-        sudo apt-get install -y \
+          patchelf \
           libglib2.0-dev \
           libatk1.0-dev \
           libpango1.0-dev \
           libgdk-pixbuf2.0-dev \
           libcairo2-dev
-          
-        # 尝试安装 libsoup 依赖
-        sudo apt-get install -y libsoup-3.0-dev || sudo apt-get install -y libsoup2.4-dev || true
+
+        # 更新库缓存
+        sudo ldconfig
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+
+    # Windows 图标修复
+    - name: Prepare Windows Icon
+      if: runner.os == 'Windows'
+      run: |
+        if (-Not (Test-Path -Path "src-tauri/icons")) {
+          New-Item -ItemType Directory -Force -Path "src-tauri/icons"
+        }
         
-        # 验证安装
-        pkg-config --list-all | grep -E 'gtk|gdk|webkit|javascript'
+        # 使用正确的图标URL
+        $iconUrl = "https://raw.githubusercontent.com/tauri-apps/tauri/main/apps/desktop/src-tauri/icons/Square150x150Logo.png"
+        $icoPath = "src-tauri/icons/icon.ico"
         
-        # 显示 PKG_CONFIG_PATH 和已安装的包
-        echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
-        ls -la /usr/lib/x86_64-linux-gnu/pkgconfig/ | grep -E 'javascript|webkit'
+        if (Test-Path -Path "public/icon.png") {
+          Copy-Item -Path "public/icon.png" -Destination $icoPath -Force
+        } else {
+          Invoke-WebRequest -Uri $iconUrl -OutFile $icoPath
+        }
+        
+        if (-Not (Test-Path -Path $icoPath)) {
+          Write-Error "图标文件准备失败"
+          exit 1
+        }
 
     - name: Setup Node.js with Yarn
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
         cache: 'yarn'
-
-    # 修复 Windows 图标问题
-    - name: Prepare Windows Icon
-      if: runner.os == 'Windows'
-      run: |
-        # 确保目录存在
-        if (!(Test-Path -Path "src-tauri/icons")) {
-          New-Item -ItemType Directory -Force -Path "src-tauri/icons"
-        }
-        
-        # 创建有效的.ico文件
-        # 方案1: 如果有其他图标资源，尝试转换
-        if (Test-Path -Path "public/icon.png") {
-          # 使用ImageMagick或其他工具进行转换
-          # 这里用powershell简单方案替代
-          Copy-Item -Path "public/icon.png" -Destination "src-tauri/icons/icon.ico" -Force
-          Write-Host "已复制PNG图标作为ICO"
-        }
-        # 方案2: 下载示例图标
-        else {
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tauri-apps/tauri/dev/examples/icons/favicon.ico" -OutFile "src-tauri/icons/icon.ico"
-          Write-Host "已下载示例图标"
-        }
-        
-        # 验证图标是否存在
-        if (Test-Path -Path "src-tauri/icons/icon.ico") {
-          Write-Host "图标文件已准备就绪"
-        } else {
-          Write-Error "无法准备必要的图标文件"
-          exit 1
-        }
 
     - name: Update Vulnerable Dependencies
       run: |
@@ -143,17 +126,14 @@ jobs:
       run: |
         yarn install --frozen-lockfile --ignore-engines --production=false
 
-    # 跨平台兼容的安全检查
     - name: Security Audit
       shell: bash
       run: |
         yarn audit --groups dependencies --level high || echo "Security audit completed with warnings"
-        
-    # 针对不同平台的构建优化
+
     - name: Build application
       shell: bash
       run: |
-        # 平台特定的优化
         if [[ "$RUNNER_OS" == "macOS" ]]; then
           export NODE_OPTIONS="--max-old-space-size=24576"
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -161,116 +141,79 @@ jobs:
         else
           export NODE_OPTIONS="--max-old-space-size=8192"
         fi
-        
         echo "Building with NODE_OPTIONS: $NODE_OPTIONS"
-        
-        # 使用正确的 Vite 构建命令
         yarn build:only --mode production
-      
       env:
-        # 通用环境变量
         NODE_ENV: production
         VITE_DROP_CONSOLE: "true"
         VITE_SOURCEMAP: "false"
 
-    # 修复 macOS DMG 打包问题
+    # macOS 构建
     - name: Build Tauri App (macOS)
       if: runner.os == 'macOS'
       run: |
-        echo "使用目标架构: $TAURI_TARGET"
-        # 确保 DMG 工具已安装
         brew install create-dmg || true
-        # 设置权限
         chmod +x src-tauri/build-aux/bundle_dmg.sh 2>/dev/null || true
-        # 构建应用
         yarn tauri build --target $TAURI_TARGET
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
-        # 禁用 DMG 制作以避免错误（如果需要）
-        # TAURI_SKIP_DMG: "true"
 
+    # Linux 构建
     - name: Build Tauri App (Linux)
       if: runner.os == 'Linux'
       run: |
-        # 设置额外的环境变量以帮助构建过程找到库
         export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
-        # 检查是否安装了正确的包
-        pkg-config --list-all | grep -E 'javascript|webkit' || echo "Package check completed"
-        # 尝试以不同方式构建
         yarn tauri build --target ${{ matrix.rust-target }}
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
-        # 使用 WebKit 4.1 而不是 4.0
         WEBKIT_DISABLE_COMPOSITING_MODE: "1"
 
+    # Windows 构建
     - name: Build Tauri App (Windows)
       if: runner.os == 'Windows'
       run: |
-        # 确保图标文件存在
-        if (-Not (Test-Path -Path "src-tauri/icons/icon.ico")) {
-          Write-Error "Icon file still missing"
-          exit 1
-        }
         yarn tauri build --target ${{ matrix.rust-target }}
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
 
-    # 获取包版本信息
     - name: Get Package Version
       id: package-version
       shell: bash
       run: |
         VERSION=$(node -p "require('./package.json').version")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Package version: $VERSION"
-    
-    # 重命名生成的安装包以包含版本号
+
     - name: Rename Artifacts with Version
       shell: bash
       run: |
         VERSION="${{ steps.package-version.outputs.version }}"
         OS="${{ runner.os }}"
+        ARTIFACTS_DIR="src-tauri/target/release/bundle"
         
-        if [[ "$OS" == "Linux" ]]; then
-          ARTIFACTS_DIR="src-tauri/target/release/bundle"
-          if [[ -d "$ARTIFACTS_DIR/deb" ]]; then
+        case $OS in
+          Linux)
             for file in $ARTIFACTS_DIR/deb/*.deb; do
-              newname=$(echo $file | sed "s/\.deb/-$VERSION.deb/")
-              mv "$file" "$newname"
-              echo "Renamed $file to $newname"
+              mv "$file" "${file%.deb}-$VERSION.deb"
             done
-          fi
-          if [[ -d "$ARTIFACTS_DIR/appimage" ]]; then
             for file in $ARTIFACTS_DIR/appimage/*.AppImage; do
-              newname=$(echo $file | sed "s/\.AppImage/-$VERSION.AppImage/")
-              mv "$file" "$newname"
-              echo "Renamed $file to $newname"
+              mv "$file" "${file%.AppImage}-$VERSION.AppImage"
             done
-          fi
-        elif [[ "$OS" == "Windows" ]]; then
-          ARTIFACTS_DIR="src-tauri/target/release/bundle"
-          if [[ -d "$ARTIFACTS_DIR/msi" ]]; then
+            ;;
+          Windows)
             for file in $ARTIFACTS_DIR/msi/*.msi; do
-              newname=$(echo $file | sed "s/\.msi/-$VERSION.msi/")
-              mv "$file" "$newname"
-              echo "Renamed $file to $newname"
+              mv "$file" "${file%.msi}-$VERSION.msi"
             done
-          fi
-        elif [[ "$OS" == "macOS" ]]; then
-          ARTIFACTS_DIR="src-tauri/target/release/bundle"
-          if [[ -d "$ARTIFACTS_DIR/dmg" ]]; then
+            ;;
+          macOS)
             for file in $ARTIFACTS_DIR/dmg/*.dmg; do
-              newname=$(echo $file | sed "s/\.dmg/-$VERSION.dmg/")
-              mv "$file" "$newname"
-              echo "Renamed $file to $newname"
+              mv "$file" "${file%.dmg}-$VERSION.dmg"
             done
-          fi
-        fi
+            ;;
+        esac
 
-    # 上传构建产物
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -280,20 +223,13 @@ jobs:
           src-tauri/target/release/bundle/appimage/*.AppImage
           src-tauri/target/release/bundle/msi/*.msi
           src-tauri/target/release/bundle/dmg/*.dmg
-          src-tauri/target/release/*.exe
-          !src-tauri/target/release/*.d
-          src-tauri/target/${{ env.TAURI_TARGET }}/release/* 
         retention-days: 7
-        if-no-files-found: warn
 
-    # Windows 特定清理
     - name: Windows Cleanup
       if: runner.os == 'Windows'
       run: |
-        git config --system core.longpaths true
         Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
 
-  # 添加发布作业
   create-release:
     name: Create Release
     if: github.event.inputs.create_release == 'true'
@@ -303,56 +239,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # 获取包版本信息
       - name: Get Package Version
         id: package-version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Package version: $VERSION"
       
-      # 下载所有构建产物
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
       
-      # 列出下载的文件
-      - name: List Downloaded Files
-        run: |
-          find artifacts -type f | sort
-      
-      # 创建版本标签
       - name: Create Tag
         id: create_tag
         run: |
-          TAG_NAME="${{ github.event.inputs.version_tag }}"
-          if [ -z "$TAG_NAME" ]; then
-            TAG_NAME="v${{ steps.package-version.outputs.version }}"
-          fi
+          TAG_NAME="${{ github.event.inputs.version_tag || 'v' }}${{ steps.package-version.outputs.version }}"
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           git tag $TAG_NAME
           git push origin $TAG_NAME
       
-      # 创建 GitHub Release
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.create_tag.outputs.tag_name }}
           name: Release ${{ steps.create_tag.outputs.tag_name }}
           body: |
-            # 发布说明
+            # 版本 ${{ steps.package-version.outputs.version }}
+            构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          files: |
+            artifacts/**/*
             
-            MD Markdown 编辑器版本 ${{ steps.package-version.outputs.version }}
-            
-            ## 变更内容
-            
-            - 自动构建于 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            - 编译时间: $(date '+%Y-%m-%d %H:%M:%S')
-            
-            ## 安装包
-            
-            - Windows: .msi 安装包
-            - macOS: .dmg
