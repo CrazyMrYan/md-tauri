@@ -26,7 +26,7 @@ runs:
       id: create_tag
       shell: bash
       run: |
-        TAG_NAME="${{ github.event.inputs.version_tag || 'v' }}${{ steps.package-version.outputs.version }}"
+        TAG_NAME="v${{ steps.package-version.outputs.version }}"
         echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
         git tag $TAG_NAME
         git push origin $TAG_NAME
