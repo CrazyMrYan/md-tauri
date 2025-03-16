@@ -30,6 +30,17 @@ runs:
         git tag $TAG_NAME
         git push origin $TAG_NAME
     
+    - name: Generate Release Info
+      id: release_info
+      shell: bash
+      run: |
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+        
+        # 列出下载的构建产物
+        echo "找到以下构建产物:"
+        find artifacts -type f | sort
+    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -37,6 +48,9 @@ runs:
         name: Release ${{ steps.create_tag.outputs.tag_name }}
         body: |
           # 版本 ${{ steps.package-version.outputs.version }}
-          构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          构建时间: ${{ steps.release_info.outputs.build_date }}
         files: |
-          artifacts/**/*
+          artifacts/**/*.dmg
+          artifacts/**/*.msi
+          artifacts/**/*.deb
+          artifacts/**/*.AppImage
