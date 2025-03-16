@@ -17,10 +17,10 @@ runs:
     
     - name: Download artifacts
       uses: actions/download-artifact@v4
-      shell: bash
       with:
         path: artifacts
         merge-multiple: true
+      shell: bash
     
     - name: Create Tag
       id: create_tag
@@ -33,7 +33,6 @@ runs:
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
-      shell: bash
       with:
         tag_name: ${{ steps.create_tag.outputs.tag_name }}
         name: Release ${{ steps.create_tag.outputs.tag_name }}
@@ -42,3 +41,4 @@ runs:
           构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
         files: |
           artifacts/**/*
+      shell: bash
