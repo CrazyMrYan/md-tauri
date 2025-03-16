@@ -68,6 +68,7 @@ runs:
                 echo "找到app目录，内容如下:"
                 ls -la "$ARTIFACTS_DIR/app"
               fi
+              exit 1
             else
               echo "找到以下DMG文件:"
               echo "$DMG_FILES"
