@@ -30,6 +30,7 @@ runs:
           libgtk-3-dev \
           libwebkit2gtk-4.1-dev \
           libjavascriptcoregtk-4.1-dev \
+          libjavascriptcoregtk-4.0-dev \
           libayatana-appindicator3-dev \
           libsoup2.4-dev \
           libsoup2.4-1 \
@@ -54,7 +55,7 @@ runs:
         }
         
         # 使用正确的图标URL
-        $iconUrl = "https://raw.githubusercontent.com/tauri-apps/tauri/main/apps/desktop/src-tauri/icons/Square150x150Logo.png"
+        $iconUrl = "https://raw.githubusercontent.com/CrazyMrYan/md-tauri/refs/heads/main/public/assets/images/logo.png"
         $icoPath = "src-tauri/icons/icon.ico"
         
         if (Test-Path -Path "public/icon.png") {
