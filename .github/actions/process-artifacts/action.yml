@@ -1,0 +1,62 @@
+# .github/actions/process-artifacts/action.yml
+name: 'Process Artifacts'
+description: 'Process and rename build artifacts'
+
+inputs:
+  os:
+    description: 'Operating system'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Package Version
+      id: package-version
+      shell: bash
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Rename Artifacts with Version
+      shell: bash
+      run: |
+        VERSION="${{ steps.package-version.outputs.version }}"
+        OS="${{ inputs.os }}"
+        ARTIFACTS_DIR="src-tauri/target/release/bundle"
+        
+        case $OS in
+          Linux)
+            for file in $ARTIFACTS_DIR/deb/*.deb; do
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.deb}-$VERSION.deb"
+              fi
+            done
+            for file in $ARTIFACTS_DIR/appimage/*.AppImage; do
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.AppImage}-$VERSION.AppImage"
+              fi
+            done
+            ;;
+          Windows)
+            for file in $ARTIFACTS_DIR/msi/*.msi; do
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.msi}-$VERSION.msi"
+              fi
+            done
+            ;;
+          macOS)
+            for file in $ARTIFACTS_DIR/dmg/*.dmg; do
+              if [ -f "$file" ]; then
+                # 获取文件名（不含路径和扩展名）
+                filename=$(basename "$file" .dmg)
+                # 确保目标目录存在
+                mkdir -p "$ARTIFACTS_DIR/dmg"
+                # 重命名文件，确保使用正确的文件名格式
+                mv "$file" "$ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
+                echo "Renamed DMG file to: $ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
+              else
+                echo "Warning: DMG file not found at $file"
+              fi
+            done
+            ;;
+        esac

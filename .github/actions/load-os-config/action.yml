@@ -1,0 +1,69 @@
+# .github/actions/load-os-config/action.yml
+name: 'Load OS Configuration'
+description: 'Load OS-specific configuration for the build process'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup macOS Rust target
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "arm64" ]; then
+          echo "TAURI_TARGET=aarch64-apple-darwin" >> $GITHUB_ENV
+          rustup target add aarch64-apple-darwin
+        else
+          echo "TAURI_TARGET=x86_64-apple-darwin" >> $GITHUB_ENV
+          rustup target add x86_64-apple-darwin
+        fi
+
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get remove -y libappindicator3-dev libappindicator3-1 || true
+        
+        # 安装核心依赖
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libwebkit2gtk-4.1-dev \
+          libjavascriptcoregtk-4.1-dev \
+          libayatana-appindicator3-dev \
+          libsoup2.4-dev \
+          libsoup2.4-1 \
+          libssl-dev \
+          patchelf \
+          libglib2.0-dev \
+          libatk1.0-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libcairo2-dev
+
+        # 更新库缓存
+        sudo ldconfig
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
+
+    - name: Prepare Windows Icon
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (-Not (Test-Path -Path "src-tauri/icons")) {
+          New-Item -ItemType Directory -Force -Path "src-tauri/icons"
+        }
+        
+        # 使用正确的图标URL
+        $iconUrl = "https://raw.githubusercontent.com/CrazyMrYan/md-tauri/refs/heads/main/public/assets/images/logo.png"
+        $icoPath = "src-tauri/icons/icon.ico"
+        
+        if (Test-Path -Path "public/icon.png") {
+          Copy-Item -Path "public/icon.png" -Destination $icoPath -Force
+        } else {
+          Invoke-WebRequest -Uri $iconUrl -OutFile $icoPath
+        }
+        
+        if (-Not (Test-Path -Path $icoPath)) {
+          Write-Error "图标文件准备失败"
+          exit 1
+        }

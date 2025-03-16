@@ -1,0 +1,44 @@
+# .github/actions/create-release/action.yml
+name: 'Create Release'
+description: 'Create a new GitHub release with artifacts'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Get Package Version
+      id: package-version
+      shell: bash
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      shell: bash
+      with:
+        path: artifacts
+        merge-multiple: true
+    
+    - name: Create Tag
+      id: create_tag
+      shell: bash
+      run: |
+        TAG_NAME="v${{ steps.package-version.outputs.version }}"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        git tag $TAG_NAME
+        git push origin $TAG_NAME
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      shell: bash
+      with:
+        tag_name: ${{ steps.create_tag.outputs.tag_name }}
+        name: Release ${{ steps.create_tag.outputs.tag_name }}
+        body: |
+          # 版本 ${{ steps.package-version.outputs.version }}
+          构建时间: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        files: |
+          artifacts/**/*
