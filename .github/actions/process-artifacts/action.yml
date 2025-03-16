@@ -27,20 +27,36 @@ runs:
         case $OS in
           Linux)
             for file in $ARTIFACTS_DIR/deb/*.deb; do
-              mv "$file" "${file%.deb}-$VERSION.deb"
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.deb}-$VERSION.deb"
+              fi
             done
             for file in $ARTIFACTS_DIR/appimage/*.AppImage; do
-              mv "$file" "${file%.AppImage}-$VERSION.AppImage"
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.AppImage}-$VERSION.AppImage"
+              fi
             done
             ;;
           Windows)
             for file in $ARTIFACTS_DIR/msi/*.msi; do
-              mv "$file" "${file%.msi}-$VERSION.msi"
+              if [ -f "$file" ]; then
+                mv "$file" "${file%.msi}-$VERSION.msi"
+              fi
             done
             ;;
           macOS)
             for file in $ARTIFACTS_DIR/dmg/*.dmg; do
-              mv "$file" "${file%.dmg}-$VERSION.dmg"
+              if [ -f "$file" ]; then
+                # 获取文件名（不含路径和扩展名）
+                filename=$(basename "$file" .dmg)
+                # 确保目标目录存在
+                mkdir -p "$ARTIFACTS_DIR/dmg"
+                # 重命名文件，确保使用正确的文件名格式
+                mv "$file" "$ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
+                echo "Renamed DMG file to: $ARTIFACTS_DIR/dmg/$filename-$VERSION.dmg"
+              else
+                echo "Warning: DMG file not found at $file"
+              fi
             done
             ;;
         esac
