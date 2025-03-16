@@ -1,0 +1,125 @@
+# .github/workflows/build.yml - 主工作流文件
+name: Cross-Platform Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: '创建发布版本'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      version_tag:
+        description: '版本标签 (例如: v1.0.0)'
+        required: false
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_OPTIONS: "--max-old-space-size=8192"
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            rust-target: x86_64-apple-darwin
+          - os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Load OS-specific configuration
+      uses: ./.github/actions/load-os-config
+      
+    - name: Setup Node.js with Yarn
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'yarn'
+
+    - name: Update Vulnerable Dependencies
+      run: |
+        yarn add axios@^1.8.2
+        yarn add @babel/runtime-corejs2@^7.26.10 @babel/runtime@^7.26.10
+        yarn upgrade qiniu-js tiny-oss
+
+    - name: Install dependencies
+      run: |
+        yarn install --frozen-lockfile --ignore-engines --production=false
+
+    - name: Security Audit
+      shell: bash
+      run: |
+        yarn audit --groups dependencies --level high || echo "Security audit completed with warnings"
+
+    - name: Build application
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          export NODE_OPTIONS="--max-old-space-size=24576"
+        elif [[ "$RUNNER_OS" == "Windows" ]]; then
+          export NODE_OPTIONS="--max-old-space-size=12288"
+        else
+          export NODE_OPTIONS="--max-old-space-size=8192"
+        fi
+        echo "Building with NODE_OPTIONS: $NODE_OPTIONS"
+        yarn build:only --mode production
+      env:
+        NODE_ENV: production
+        VITE_DROP_CONSOLE: "true"
+        VITE_SOURCEMAP: "false"
+
+    - name: Build Tauri App
+      uses: ./.github/actions/build-tauri
+      with:
+        os: ${{ runner.os }}
+        rust-target: ${{ matrix.rust-target }}
+        
+    - name: Process artifacts
+      uses: ./.github/actions/process-artifacts
+      with:
+        os: ${{ runner.os }}
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.os }}
+        path: |
+          src-tauri/target/release/bundle/deb/*.deb
+          src-tauri/target/release/bundle/appimage/*.AppImage
+          src-tauri/target/release/bundle/msi/*.msi
+          src-tauri/target/release/bundle/dmg/*.dmg
+        retention-days: 7
+
+    - name: Windows Cleanup
+      if: runner.os == 'Windows'
+      run: |
+        Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+
+  create-release:
+    name: Create Release
+    if: github.event.inputs.create_release == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/create-release

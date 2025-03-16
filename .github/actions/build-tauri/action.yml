@@ -1,0 +1,45 @@
+# .github/actions/build-tauri/action.yml
+name: 'Build Tauri App'
+description: 'Build the Tauri application for different platforms'
+
+inputs:
+  os:
+    description: 'Operating system'
+    required: true
+  rust-target:
+    description: 'Rust target'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build Tauri App (macOS)
+      if: inputs.os == 'macOS'
+      shell: bash
+      run: |
+        brew install create-dmg || true
+        chmod +x src-tauri/build-aux/bundle_dmg.sh 2>/dev/null || true
+        yarn tauri build --target $TAURI_TARGET
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
+
+    - name: Build Tauri App (Linux)
+      if: inputs.os == 'Linux'
+      shell: bash
+      run: |
+        export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+        yarn tauri build --target ${{ inputs.rust-target }}
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
+        WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+
+    - name: Build Tauri App (Windows)
+      if: inputs.os == 'Windows'
+      shell: bash
+      run: |
+        yarn tauri build --target ${{ inputs.rust-target }}
+      env:
+        CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
+        RUST_BACKTRACE: "1"
