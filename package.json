@@ -25,7 +25,7 @@
     "tauri": "tauri",
     "dev:web": "vite --host",
     "tauri:dev": "LANG=zh_CN.UTF-8 && tauri dev",
-    "tauri:build": "cross-env NODE_OPTIONS='--no-node-snapshot' tauri build"
+    "tauri:build": "NODE_OPTIONS='--max-old-space-size=4096' tauri build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.733.0",

@@ -6,6 +6,9 @@ inputs:
   os:
     description: 'Operating system'
     required: true
+  rust-target:
+    description: 'Rust target'
+    required: true
 
 runs:
   using: "composite"
@@ -22,7 +25,29 @@ runs:
       run: |
         VERSION="${{ steps.package-version.outputs.version }}"
         OS="${{ inputs.os }}"
-        ARTIFACTS_DIR="src-tauri/target/release/bundle"
+        RUST_TARGET="${{ inputs.rust-target }}"
+        
+        # 使用传入的rust目标平台
+        ARTIFACTS_DIR="src-tauri/target/$RUST_TARGET/release/bundle"
+        echo "使用构建产物目录: $ARTIFACTS_DIR"
+        
+        # 检查目录是否存在
+        if [ ! -d "$ARTIFACTS_DIR" ]; then
+          echo "警告: 目标平台目录不存在: $ARTIFACTS_DIR"
+          echo "尝试使用通用路径..."
+          ARTIFACTS_DIR="src-tauri/target/release/bundle"
+          
+          if [ ! -d "$ARTIFACTS_DIR" ]; then
+            echo "错误: 构建产物目录不存在: $ARTIFACTS_DIR"
+            echo "列出可用目录:"
+            find src-tauri/target -type d -name "bundle" | sort
+            exit 1
+          fi
+        fi
+        
+        # 列出构建产物目录内容以便调试
+        echo "构建产物目录内容:"
+        find "$ARTIFACTS_DIR" -type f | sort
         
         case $OS in
           Linux)
@@ -47,12 +72,8 @@ runs:
           macOS)
             # 首先检查DMG目录是否存在
             if [ ! -d "$ARTIFACTS_DIR/dmg" ]; then
-              echo "错误: DMG目录不存在: $ARTIFACTS_DIR/dmg"
-              # 检查整个bundle目录结构
-              echo "检查bundle目录结构:"
-              find "$ARTIFACTS_DIR" -type d | sort
-              echo "检查是否有DMG文件在其他位置:"
-              find "$ARTIFACTS_DIR" -name "*.dmg" | sort
+              echo "DMG目录不存在，创建目录: $ARTIFACTS_DIR/dmg"
+              mkdir -p "$ARTIFACTS_DIR/dmg"
             fi
             
             # 查找DMG文件
@@ -68,12 +89,10 @@ runs:
                 echo "找到app目录，内容如下:"
                 ls -la "$ARTIFACTS_DIR/app"
               fi
+              exit 1
             else
               echo "找到以下DMG文件:"
               echo "$DMG_FILES"
-              
-              # 确保dmg目录存在
-              mkdir -p "$ARTIFACTS_DIR/dmg"
               
               # 处理每个找到的DMG文件
               for file in $DMG_FILES; do
