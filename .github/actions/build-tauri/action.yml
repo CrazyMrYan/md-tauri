@@ -17,6 +17,12 @@ runs:
       if: inputs.os == 'macOS'
       shell: bash
       run: |
+        # 安装x86_64-apple-darwin目标
+        rustup target add ${{ inputs.rust-target }} || {
+          echo "Failed to add rust target ${{ inputs.rust-target }}"
+          exit 1
+        }
+        
         # 确保create-dmg工具安装成功
         brew install create-dmg || {
           echo "Failed to install create-dmg, retrying..."
@@ -83,7 +89,19 @@ runs:
         pkg-config --exists javascriptcoregtk-4.0 || echo "javascriptcoregtk-4.0 not found in PKG_CONFIG_PATH"
         # 检查webkit2gtk-4.0是否可以被找到
         pkg-config --exists webkit2gtk-4.0 || echo "webkit2gtk-4.0 not found in PKG_CONFIG_PATH"
-        yarn tauri build --target ${{ inputs.rust-target }}
+        # 安装目标平台
+        rustup target add ${{ inputs.rust-target }} || {
+          echo "Failed to add rust target ${{ inputs.rust-target }}"
+          exit 1
+        }
+        # 构建应用
+        yarn tauri build --target ${{ inputs.rust-target }} || {
+          echo "Tauri build failed"
+          exit 1
+        }
+        # 检查构建产物
+        echo "Checking build artifacts:"
+        find src-tauri/target/release/bundle -type f -name "*.deb" -o -name "*.AppImage"
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
@@ -93,6 +111,12 @@ runs:
       if: inputs.os == 'Windows'
       shell: bash
       run: |
+        # 安装目标平台
+        rustup target add ${{ inputs.rust-target }} || {
+          echo "Failed to add rust target ${{ inputs.rust-target }}"
+          exit 1
+        }
+        
         # 在构建前运行图标转换脚本（使用.cjs扩展名）
         node src-tauri/build-aux/convert_icon.cjs
         # 如果转换失败，尝试安装ImageMagick并重试
@@ -101,7 +125,16 @@ runs:
           choco install imagemagick -y
           node src-tauri/build-aux/convert_icon.cjs
         fi
-        yarn tauri build --target ${{ inputs.rust-target }}
+        
+        # 构建应用
+        yarn tauri build --target ${{ inputs.rust-target }} || {
+          echo "Tauri build failed"
+          exit 1
+        }
+        
+        # 检查构建产物
+        echo "Checking build artifacts:"
+        find src-tauri/target/release/bundle -type f -name "*.msi"
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"

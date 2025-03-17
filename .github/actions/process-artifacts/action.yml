@@ -47,12 +47,8 @@ runs:
           macOS)
             # 首先检查DMG目录是否存在
             if [ ! -d "$ARTIFACTS_DIR/dmg" ]; then
-              echo "错误: DMG目录不存在: $ARTIFACTS_DIR/dmg"
-              # 检查整个bundle目录结构
-              echo "检查bundle目录结构:"
-              find "$ARTIFACTS_DIR" -type d | sort
-              echo "检查是否有DMG文件在其他位置:"
-              find "$ARTIFACTS_DIR" -name "*.dmg" | sort
+              echo "DMG目录不存在，创建目录: $ARTIFACTS_DIR/dmg"
+              mkdir -p "$ARTIFACTS_DIR/dmg"
             fi
             
             # 查找DMG文件
@@ -72,9 +68,6 @@ runs:
             else
               echo "找到以下DMG文件:"
               echo "$DMG_FILES"
-              
-              # 确保dmg目录存在
-              mkdir -p "$ARTIFACTS_DIR/dmg"
               
               # 处理每个找到的DMG文件
               for file in $DMG_FILES; do
