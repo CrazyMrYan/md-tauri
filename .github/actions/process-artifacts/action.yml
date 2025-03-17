@@ -6,6 +6,9 @@ inputs:
   os:
     description: 'Operating system'
     required: true
+  rust-target:
+    description: 'Rust target'
+    required: true
 
 runs:
   using: "composite"
@@ -22,29 +25,29 @@ runs:
       run: |
         VERSION="${{ steps.package-version.outputs.version }}"
         OS="${{ inputs.os }}"
+        RUST_TARGET="${{ inputs.rust-target }}"
         
-        # 获取rust目标平台
-        case $OS in
-          Linux)
-            RUST_TARGET="x86_64-unknown-linux-gnu"
-            ;;
-          Windows)
-            RUST_TARGET="x86_64-pc-windows-msvc"
-            ;;
-          macOS)
-            RUST_TARGET="x86_64-apple-darwin"
-            ;;
-        esac
-        
-        # 更新构建产物目录路径，包含目标平台信息
+        # 使用传入的rust目标平台
         ARTIFACTS_DIR="src-tauri/target/$RUST_TARGET/release/bundle"
         echo "使用构建产物目录: $ARTIFACTS_DIR"
         
-        # 如果特定平台目录不存在，尝试使用通用路径
+        # 检查目录是否存在
         if [ ! -d "$ARTIFACTS_DIR" ]; then
-          echo "特定平台目录不存在，尝试使用通用路径"
+          echo "警告: 目标平台目录不存在: $ARTIFACTS_DIR"
+          echo "尝试使用通用路径..."
           ARTIFACTS_DIR="src-tauri/target/release/bundle"
+          
+          if [ ! -d "$ARTIFACTS_DIR" ]; then
+            echo "错误: 构建产物目录不存在: $ARTIFACTS_DIR"
+            echo "列出可用目录:"
+            find src-tauri/target -type d -name "bundle" | sort
+            exit 1
+          fi
         fi
+        
+        # 列出构建产物目录内容以便调试
+        echo "构建产物目录内容:"
+        find "$ARTIFACTS_DIR" -type f | sort
         
         case $OS in
           Linux)

@@ -99,17 +99,19 @@ jobs:
       uses: ./.github/actions/process-artifacts
       with:
         os: ${{ runner.os }}
+        rust-target: ${{ matrix.rust-target }}
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: release-${{ matrix.os }}
         path: |
-          ${{ runner.os == 'Linux' && format('src-tauri/target/{0}/release/bundle/deb/*.deb', matrix.rust-target) || '' }}
-          ${{ runner.os == 'Linux' && format('src-tauri/target/{0}/release/bundle/appimage/*.AppImage', matrix.rust-target) || '' }}
-          ${{ runner.os == 'Windows' && format('src-tauri/target/{0}/release/bundle/msi/*.msi', matrix.rust-target) || '' }}
-          ${{ runner.os == 'macOS' && format('src-tauri/target/{0}/release/bundle/dmg/*.dmg', matrix.rust-target) || '' }}
+          src-tauri/target/${{ matrix.rust-target }}/release/bundle/deb/*.deb
+          src-tauri/target/${{ matrix.rust-target }}/release/bundle/appimage/*.AppImage
+          src-tauri/target/${{ matrix.rust-target }}/release/bundle/msi/*.msi
+          src-tauri/target/${{ matrix.rust-target }}/release/bundle/dmg/*.dmg
         retention-days: 7
+        if-no-files-found: warn
 
     - name: Windows Cleanup
       if: runner.os == 'Windows'
