@@ -42,7 +42,11 @@ runs:
         }
         
         # 检查构建产物
-        ls -la src-tauri/target/release/bundle/
+        echo "Checking build artifacts:"
+        ls -la src-tauri/target/${{ inputs.rust-target }}/release/bundle/ || {
+          echo "Failed to list build artifacts directory"
+          find src-tauri/target -name "bundle" -type d
+        }
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
@@ -101,7 +105,11 @@ runs:
         }
         # 检查构建产物
         echo "Checking build artifacts:"
-        find src-tauri/target/release/bundle -type f -name "*.deb" -o -name "*.AppImage"
+        ls -la src-tauri/target/${{ inputs.rust-target }}/release/bundle/ || {
+          echo "Failed to list build artifacts directory"
+          find src-tauri/target -name "bundle" -type d
+        }
+        find src-tauri/target/${{ inputs.rust-target }}/release/bundle -type f -name "*.deb" -o -name "*.AppImage"
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
@@ -134,7 +142,11 @@ runs:
         
         # 检查构建产物
         echo "Checking build artifacts:"
-        find src-tauri/target/release/bundle -type f -name "*.msi"
+        ls -la src-tauri/target/${{ inputs.rust-target }}/release/bundle/ || {
+          echo "Failed to list build artifacts directory"
+          find src-tauri/target -name "bundle" -type d
+        }
+        find src-tauri/target/${{ inputs.rust-target }}/release/bundle -type f -name "*.msi"
       env:
         CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: "true"
         RUST_BACKTRACE: "1"
