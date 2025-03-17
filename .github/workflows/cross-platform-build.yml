@@ -105,10 +105,10 @@ jobs:
       with:
         name: release-${{ matrix.os }}
         path: |
-          ${{ runner.os == 'Linux' && 'src-tauri/target/release/bundle/deb/*.deb' || '' }}
-          ${{ runner.os == 'Linux' && 'src-tauri/target/release/bundle/appimage/*.AppImage' || '' }}
-          ${{ runner.os == 'Windows' && 'src-tauri/target/release/bundle/msi/*.msi' || '' }}
-          ${{ runner.os == 'macOS' && 'src-tauri/target/release/bundle/dmg/*.dmg' || '' }}
+          ${{ runner.os == 'Linux' && format('src-tauri/target/{0}/release/bundle/deb/*.deb', matrix.rust-target) || '' }}
+          ${{ runner.os == 'Linux' && format('src-tauri/target/{0}/release/bundle/appimage/*.AppImage', matrix.rust-target) || '' }}
+          ${{ runner.os == 'Windows' && format('src-tauri/target/{0}/release/bundle/msi/*.msi', matrix.rust-target) || '' }}
+          ${{ runner.os == 'macOS' && format('src-tauri/target/{0}/release/bundle/dmg/*.dmg', matrix.rust-target) || '' }}
         retention-days: 7
 
     - name: Windows Cleanup

@@ -22,7 +22,29 @@ runs:
       run: |
         VERSION="${{ steps.package-version.outputs.version }}"
         OS="${{ inputs.os }}"
-        ARTIFACTS_DIR="src-tauri/target/release/bundle"
+        
+        # 获取rust目标平台
+        case $OS in
+          Linux)
+            RUST_TARGET="x86_64-unknown-linux-gnu"
+            ;;
+          Windows)
+            RUST_TARGET="x86_64-pc-windows-msvc"
+            ;;
+          macOS)
+            RUST_TARGET="x86_64-apple-darwin"
+            ;;
+        esac
+        
+        # 更新构建产物目录路径，包含目标平台信息
+        ARTIFACTS_DIR="src-tauri/target/$RUST_TARGET/release/bundle"
+        echo "使用构建产物目录: $ARTIFACTS_DIR"
+        
+        # 如果特定平台目录不存在，尝试使用通用路径
+        if [ ! -d "$ARTIFACTS_DIR" ]; then
+          echo "特定平台目录不存在，尝试使用通用路径"
+          ARTIFACTS_DIR="src-tauri/target/release/bundle"
+        fi
         
         case $OS in
           Linux)
