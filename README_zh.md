@@ -18,9 +18,11 @@
 
 ## 安装包
 
-### MacOS
-
-[MD Tauri v1.0.0](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.0.0-beta.1#:~:text=md%2Dtauri_1.0.0_aarch64.dmg)
+| 系统                                   | 安装包                                                                                                                  |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ![](./public/assets/icons/macos.png)   | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_x64%2D1.1.0.dmg)         |
+| ![](./public/assets/icons/windows.png) | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_x64_zh%2DCN%2D1.1.0.msi) |
+| ![](./public/assets/icons/ubuntu.png)  | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_amd64%2D1.1.0.deb)       |
 
 ## 预览效果截图
 
