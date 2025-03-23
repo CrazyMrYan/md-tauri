@@ -46,7 +46,7 @@ A modern Markdown editor built with Tauri and Vue 3, providing a seamless deskto
 
 ```bash
 # Clone the repository
-git clone [your-repo-url]
+git@github.com:CrazyMrYan/md-tauri.git
 cd md-tauri
 
 # Install dependencies

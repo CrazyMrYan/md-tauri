@@ -46,7 +46,7 @@
 
 ```bash
 # 克隆仓库
-git clone [your-repo-url]
+git@github.com:CrazyMrYan/md-tauri.git
 cd md-tauri
 
 # 安装依赖
