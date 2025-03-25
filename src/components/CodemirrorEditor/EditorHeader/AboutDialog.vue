@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { shell } from '@tauri-apps/api';
+import { isEmptyObject } from '@/utils'
+import { shell } from '@tauri-apps/api'
 
 const props = defineProps({
   visible: {
@@ -20,9 +21,13 @@ const links = [
 ]
 
 async function onRedirect(url: string) {
-  console.log(shell);
-  
-  await shell.open(url);
+  console.log(shell)
+  const isBrowser = typeof window !== `undefined` && typeof document !== `undefined`
+  if (!isEmptyObject(shell) && isBrowser) {
+    window.open(url, `_blank`, `noopener,noreferrer`)
+    return
+  }
+  await shell.open(url)
 }
 </script>
 
@@ -41,7 +46,7 @@ async function onRedirect(url: string) {
           :key="link.url"
           @click="onRedirect(link.url)"
         >
-          <img :src="`/assets/icons/${link.icon}.svg`" class="w-4 h-4 mr-2" />
+          <img :src="`/assets/icons/${link.icon}.svg`" class="mr-2 h-4 w-4">
           {{ link.label }}
         </Button>
       </DialogFooter>
