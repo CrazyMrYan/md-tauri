@@ -10,6 +10,20 @@ import CodeMirror from 'codemirror'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
+// 目录类型定义
+interface Directory {
+  id: string;
+  name: string;
+  parentId: string | null;
+  isExpanded: boolean;
+  children: string[];
+}
+
+// 文档与目录关系映射的类型定义
+interface PostDirectoryMap {
+  [key: string]: string;
+}
+
 export const useStore = defineStore(`store`, () => {
   // 是否开启深色模式
   const isDark = useDark()
@@ -61,6 +75,21 @@ export const useStore = defineStore(`store`, () => {
   const isOpenRightSlider = useStorage(addPrefix(`is_open_right_slider`), false)
 
   const isOpenPostSlider = useStorage(addPrefix(`is_open_post_slider`), false)
+  
+  // Directory structure
+  const directories = useStorage<Directory[]>(addPrefix(`directories`), [
+    {
+      id: 'root',
+      name: '根目录',
+      parentId: null,
+      isExpanded: true,
+      children: [],
+    }
+  ])
+
+  // 文档与目录关联
+  const postDirectoryMap = useStorage<PostDirectoryMap>(addPrefix(`post_directory_map`), {})
+
   // 内容列表
   const posts = useStorage(addPrefix(`posts`), [{
     title: `Markdown 快速指南`,
@@ -69,11 +98,220 @@ export const useStore = defineStore(`store`, () => {
   // 当前内容
   const currentPostIndex = useStorage(addPrefix(`current_post_index`), 0)
 
-  const addPost = (title: string) => {
+  // 生成唯一ID
+  const generateId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+  }
+
+  // 查找目录路径
+  const findDirectoryPath = (directoryId: string) => {
+    const path: string[] = [];
+    
+    const traverse = (id: string): boolean => {
+      if (id === 'root') {
+        path.unshift('根目录');
+        return true;
+      }
+      
+      const dir = directories.value.find(d => d.id === id);
+      if (dir) {
+        path.unshift(dir.name);
+        return dir.parentId === null ? true : traverse(dir.parentId);
+      }
+      
+      return false;
+    };
+    
+    traverse(directoryId);
+    return path;
+  };
+
+  // 确保兼容性处理 - 初始化时将所有未分类文档放入根目录
+  onMounted(() => {
+    // 迁移阶段，兼容之前的方案
+    if (editorContent.value !== DEFAULT_CONTENT) {
+      posts.value[currentPostIndex.value].content = editorContent.value
+      editorContent.value = DEFAULT_CONTENT
+    }
+
+    // 为所有未分类的文档分配根目录
+    posts.value.forEach((post, index) => {
+      if (!postDirectoryMap.value[index]) {
+        postDirectoryMap.value[index] = 'root';
+      }
+    });
+  })
+
+  // 添加目录
+  const addDirectory = (name: string, parentId: string = 'root') => {
+    const id = generateId();
+    directories.value.push({
+      id,
+      name,
+      parentId,
+      isExpanded: false,
+      children: []
+    });
+    
+    // 更新父目录的children数组
+    if (parentId !== null) {
+      const parent = directories.value.find(d => d.id === parentId);
+      if (parent) {
+        parent.children.push(id);
+      }
+    }
+    
+    return id;
+  }
+
+  // 重命名目录
+  const renameDirectory = (id: string, newName: string) => {
+    const dir = directories.value.find(d => d.id === id);
+    if (dir) {
+      dir.name = newName;
+    }
+  }
+
+  // 删除目录和其子目录
+  const deleteDirectory = (id: string, shouldDeleteDocuments: boolean = false): void => {
+    // 先找到这个目录
+    const dir = directories.value.find(d => d.id === id);
+    if (!dir) return;
+    
+    // 收集要删除的所有目录ID（包括子目录）
+    const idsToDelete: string[] = [];
+    
+    const collectIds = (dirId: string): void => {
+      idsToDelete.push(dirId);
+      
+      const dir = directories.value.find(d => d.id === dirId);
+      if (dir && dir.children.length > 0) {
+        dir.children.forEach(childId => collectIds(childId));
+      }
+    };
+    
+    collectIds(id);
+    
+    if (shouldDeleteDocuments) {
+      // 删除该目录下的所有文档
+      const entriesToDelete: number[] = [];
+      
+      // 找出要删除的文档索引
+      Object.entries(postDirectoryMap.value).forEach(([postIndex, dirId]) => {
+        if (idsToDelete.includes(dirId)) {
+          entriesToDelete.push(Number(postIndex));
+        }
+      });
+      
+      // 按索引从大到小排序，以避免删除时索引变化
+      entriesToDelete.sort((a, b) => b - a);
+      
+      // 删除文档
+      for (const index of entriesToDelete) {
+        posts.value.splice(index, 1);
+        delete postDirectoryMap.value[index];
+        
+        // 更新大于删除索引的映射关系
+        Object.keys(postDirectoryMap.value).forEach(key => {
+          const postIndex = Number(key);
+          if (postIndex > index) {
+            postDirectoryMap.value[String(postIndex - 1)] = postDirectoryMap.value[String(postIndex)];
+            delete postDirectoryMap.value[String(postIndex)];
+          }
+        });
+      }
+      
+      // 如果当前选中的文档被删除，重置索引
+      if (currentPostIndex.value >= posts.value.length) {
+        currentPostIndex.value = Math.max(0, posts.value.length - 1);
+      }
+    } else {
+      // 将该目录下的所有文档移到根目录
+      Object.entries(postDirectoryMap.value).forEach(([postIndex, dirId]) => {
+        if (idsToDelete.includes(dirId)) {
+          postDirectoryMap.value[postIndex] = 'root';
+        }
+      });
+    }
+    
+    // 从父目录的children列表中移除
+    if (dir.parentId !== null) {
+      const parent = directories.value.find(d => d.id === dir.parentId);
+      if (parent) {
+        const index = parent.children.indexOf(id);
+        if (index !== -1) {
+          parent.children.splice(index, 1);
+        }
+      }
+    }
+    
+    // 从directories数组中删除这些目录
+    directories.value = directories.value.filter(d => !idsToDelete.includes(d.id));
+  }
+
+  // 切换目录的展开/折叠状态
+  const toggleDirectoryExpanded = (id: string) => {
+    const dir = directories.value.find(d => d.id === id);
+    if (dir) {
+      dir.isExpanded = !dir.isExpanded;
+    }
+  }
+
+  // 移动项目（可以是目录或文档）
+  const moveItem = (itemId: string, targetDirId: string, isDirectory: boolean = false): boolean => {
+    if (isDirectory) {
+      // 不允许将目录移动到自己或自己的子目录中
+      const dir = directories.value.find(d => d.id === itemId);
+      if (!dir) return false;
+      
+      // 检查是否是移到自己或自己的子目录
+      const checkIsSelfOrChild = (dirId: string): boolean => {
+        if (dirId === itemId) return true;
+        
+        const dir = directories.value.find(d => d.id === dirId);
+        if (!dir) return false;
+        
+        return dir.parentId !== null ? checkIsSelfOrChild(dir.parentId) : false;
+      };
+      
+      if (checkIsSelfOrChild(targetDirId)) return false;
+      
+      // 先从原来的父目录中移除
+      if (dir.parentId !== null) {
+        const oldParent = directories.value.find(d => d.id === dir.parentId);
+        if (oldParent) {
+          const index = oldParent.children.indexOf(itemId);
+          if (index !== -1) {
+            oldParent.children.splice(index, 1);
+          }
+        }
+      }
+      
+      // 添加到新的父目录
+      const newParent = directories.value.find(d => d.id === targetDirId);
+      if (newParent) {
+        newParent.children.push(itemId);
+        dir.parentId = targetDirId;
+      }
+    } else {
+      // 移动文档
+      postDirectoryMap.value[itemId] = targetDirId;
+    }
+    
+    return true;
+  }
+
+  const addPost = (title: string, directoryId: string = 'root') => {
+    console.log(`[Store] Adding post with title: ${title} to directory: ${directoryId}`);
+    
     currentPostIndex.value = posts.value.push({
       title,
       content: `# ${title}`,
-    }) - 1
+    }) - 1;
+    
+    // 添加目录关联
+    postDirectoryMap.value[currentPostIndex.value] = directoryId;
+    console.log(`[Store] Added post at index ${currentPostIndex.value}, post directory map:`, postDirectoryMap.value);
   }
 
   const renamePost = (index: number, title: string) => {
@@ -83,18 +321,22 @@ export const useStore = defineStore(`store`, () => {
   const delPost = (index: number) => {
     posts.value.splice(index, 1)
     currentPostIndex.value = Math.min(index, posts.value.length - 1)
+    
+    // 更新目录映射关系
+    delete postDirectoryMap.value[index];
+    
+    // 更新大于删除索引的映射关系
+    Object.keys(postDirectoryMap.value).forEach(key => {
+      const postIndex = Number(key);
+      if (postIndex > index) {
+        postDirectoryMap.value[postIndex - 1] = postDirectoryMap.value[postIndex];
+        delete postDirectoryMap.value[postIndex];
+      }
+    });
   }
 
   watch(currentPostIndex, () => {
     toRaw(editor.value!).setValue(posts.value[currentPostIndex.value].content)
-  })
-
-  onMounted(() => {
-    // 迁移阶段，兼容之前的方案
-    if (editorContent.value !== DEFAULT_CONTENT) {
-      posts.value[currentPostIndex.value].content = editorContent.value
-      editorContent.value = DEFAULT_CONTENT
-    }
   })
 
   // 格式化文档
@@ -395,6 +637,59 @@ export const useStore = defineStore(`store`, () => {
   const exportEditorContent2HTML = async () => {
     try {
       const element = document.querySelector(`#output`)!
+      
+      // 使用内联的setStyles函数
+      function setStyles(element: Element) {
+        function getElementStyles(element: Element, excludes = [`width`, `height`, `inlineSize`, `webkitLogicalWidth`, `webkitLogicalHeight`]) {
+          const styles = getComputedStyle(element, null)
+          return Object.entries(styles)
+            .filter(
+              ([key]) => {
+                const kebabKey = key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
+                return styles.getPropertyValue(kebabKey) && !excludes.includes(key)
+              },
+            )
+            .map(([key, value]) => {
+              const kebabKey = key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
+              return `${kebabKey}:${value};`
+            })
+            .join(``)
+        }
+
+        function isPre(element: Element) {
+          return (
+            element.tagName === `PRE`
+            && Array.from(element.classList).includes(`code__pre`)
+          )
+        }
+
+        function isCode(element: Element | null) {
+          return (
+            element?.tagName === `CODE`
+            && element?.parentElement?.tagName === `PRE`
+            && Array.from(element?.parentElement?.classList || []).includes(`code__pre`)
+          )
+        }
+
+        function isSpan(element: Element) {
+          return (
+            element.tagName === `SPAN`
+            && element.parentElement?.tagName === `CODE`
+            && element.parentElement?.parentElement?.tagName === `PRE`
+          )
+        }
+
+        switch (true) {
+          case isPre(element):
+          case isCode(element):
+          case isSpan(element):
+            element.setAttribute(`style`, getElementStyles(element))
+        }
+        if (element.children.length) {
+          Array.from(element.children).forEach(child => setStyles(child))
+        }
+      }
+      
       setStyles(element)
 
       const htmlStr = element.innerHTML
@@ -509,6 +804,16 @@ export const useStore = defineStore(`store`, () => {
     delPost,
     isOpenPostSlider,
     isOpenRightSlider,
+    
+    // 新增的目录相关方法
+    directories,
+    postDirectoryMap,
+    addDirectory,
+    renameDirectory,
+    deleteDirectory,
+    toggleDirectoryExpanded,
+    moveItem,
+    findDirectoryPath,
   }
 })
 

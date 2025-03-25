@@ -68,8 +68,5 @@ body {
   &:first-of-type {
     margin-top: 0;
   }
-  &:hover {
-    background: #f0f0f0;
-  }
 }
 </style>
