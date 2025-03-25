@@ -21,13 +21,13 @@ const links = [
 ]
 
 async function onRedirect(url: string) {
-  console.log(shell)
-  const isBrowser = typeof window !== `undefined` && typeof document !== `undefined`
-  if (!isEmptyObject(shell) && isBrowser) {
-    window.open(url, `_blank`, `noopener,noreferrer`)
-    return
+  try {
+    await shell.open(url)
   }
-  await shell.open(url)
+  catch (error) {
+    window.open(url, `_blank`, `noopener,noreferrer`)
+    console.log(error)
+  }
 }
 </script>
 
