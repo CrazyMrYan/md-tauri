@@ -27,7 +27,7 @@ env:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: Build (${{ matrix.os }} - ${{ matrix.rust-target }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -36,10 +36,16 @@ jobs:
         include:
           - os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
+            artifact-name: linux-x64
           - os: macos-latest
             rust-target: x86_64-apple-darwin
+            artifact-name: macos-x64
+          - os: macos-latest
+            rust-target: aarch64-apple-darwin
+            artifact-name: macos-arm64
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
+            artifact-name: windows-x64
       fail-fast: false
 
     steps:
@@ -76,7 +82,11 @@ jobs:
       shell: bash
       run: |
         if [[ "$RUNNER_OS" == "macOS" ]]; then
-          export NODE_OPTIONS="--max-old-space-size=24576"
+          if [[ "${{ matrix.rust-target }}" == "aarch64-apple-darwin" ]]; then
+            export NODE_OPTIONS="--max-old-space-size=32768"
+          else
+            export NODE_OPTIONS="--max-old-space-size=24576"
+          fi
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
           export NODE_OPTIONS="--max-old-space-size=12288"
         else
@@ -104,7 +114,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: release-${{ matrix.os }}
+        name: ${{ matrix.artifact-name }}
         path: |
           src-tauri/target/${{ matrix.rust-target }}/release/bundle/deb/*.deb
           src-tauri/target/${{ matrix.rust-target }}/release/bundle/appimage/*.AppImage
