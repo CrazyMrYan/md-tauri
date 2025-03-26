@@ -3,25 +3,25 @@ import DEFAULT_CONTENT from '@/assets/example/markdown.md?raw'
 import DEFAULT_CSS_CONTENT from '@/assets/example/theme-css.txt?raw'
 import { altKey, codeBlockThemeOptions, colorOptions, fontFamilyOptions, fontSizeOptions, legendOptions, shiftKey, themeMap, themeOptions } from '@/config'
 import { addPrefix, css2json, customCssWithTemplate, customizeTheme, formatDoc } from '@/utils'
-import { tauriFs } from '@/utils/tauri-fs'
-
 import { initRenderer } from '@/utils/renderer'
+
+import { tauriFs } from '@/utils/tauri-fs'
 import CodeMirror from 'codemirror'
-import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 
 // 目录类型定义
 interface Directory {
-  id: string;
-  name: string;
-  parentId: string | null;
-  isExpanded: boolean;
-  children: string[];
+  id: string
+  name: string
+  parentId: string | null
+  isExpanded: boolean
+  children: string[]
 }
 
 // 文档与目录关系映射的类型定义
 interface PostDirectoryMap {
-  [key: string]: string;
+  [key: string]: string
 }
 
 export const useStore = defineStore(`store`, () => {
@@ -75,16 +75,16 @@ export const useStore = defineStore(`store`, () => {
   const isOpenRightSlider = useStorage(addPrefix(`is_open_right_slider`), false)
 
   const isOpenPostSlider = useStorage(addPrefix(`is_open_post_slider`), false)
-  
+
   // Directory structure
   const directories = useStorage<Directory[]>(addPrefix(`directories`), [
     {
-      id: 'root',
-      name: '根目录',
+      id: `root`,
+      name: `根目录`,
       parentId: null,
       isExpanded: true,
       children: [],
-    }
+    },
   ])
 
   // 文档与目录关联
@@ -100,31 +100,31 @@ export const useStore = defineStore(`store`, () => {
 
   // 生成唯一ID
   const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
   }
 
   // 查找目录路径
   const findDirectoryPath = (directoryId: string) => {
-    const path: string[] = [];
-    
+    const path: string[] = []
+
     const traverse = (id: string): boolean => {
-      if (id === 'root') {
-        path.unshift('根目录');
-        return true;
+      if (id === `root`) {
+        path.unshift(`根目录`)
+        return true
       }
-      
-      const dir = directories.value.find(d => d.id === id);
+
+      const dir = directories.value.find(d => d.id === id)
       if (dir) {
-        path.unshift(dir.name);
-        return dir.parentId === null ? true : traverse(dir.parentId);
+        path.unshift(dir.name)
+        return dir.parentId === null ? true : traverse(dir.parentId)
       }
-      
-      return false;
-    };
-    
-    traverse(directoryId);
-    return path;
-  };
+
+      return false
+    }
+
+    traverse(directoryId)
+    return path
+  }
 
   // 确保兼容性处理 - 初始化时将所有未分类文档放入根目录
   onMounted(() => {
@@ -137,123 +137,125 @@ export const useStore = defineStore(`store`, () => {
     // 为所有未分类的文档分配根目录
     posts.value.forEach((post, index) => {
       if (!postDirectoryMap.value[index]) {
-        postDirectoryMap.value[index] = 'root';
+        postDirectoryMap.value[index] = `root`
       }
-    });
+    })
   })
 
   // 添加目录
-  const addDirectory = (name: string, parentId: string = 'root') => {
-    const id = generateId();
+  const addDirectory = (name: string, parentId: string = `root`) => {
+    const id = generateId()
     directories.value.push({
       id,
       name,
       parentId,
       isExpanded: false,
-      children: []
-    });
-    
+      children: [],
+    })
+
     // 更新父目录的children数组
     if (parentId !== null) {
-      const parent = directories.value.find(d => d.id === parentId);
+      const parent = directories.value.find(d => d.id === parentId)
       if (parent) {
-        parent.children.push(id);
+        parent.children.push(id)
       }
     }
-    
-    return id;
+
+    return id
   }
 
   // 重命名目录
   const renameDirectory = (id: string, newName: string) => {
-    const dir = directories.value.find(d => d.id === id);
+    const dir = directories.value.find(d => d.id === id)
     if (dir) {
-      dir.name = newName;
+      dir.name = newName
     }
   }
 
   // 删除目录和其子目录
   const deleteDirectory = (id: string, shouldDeleteDocuments: boolean = false): void => {
     // 先找到这个目录
-    const dir = directories.value.find(d => d.id === id);
-    if (!dir) return;
-    
+    const dir = directories.value.find(d => d.id === id)
+    if (!dir)
+      return
+
     // 收集要删除的所有目录ID（包括子目录）
-    const idsToDelete: string[] = [];
-    
+    const idsToDelete: string[] = []
+
     const collectIds = (dirId: string): void => {
-      idsToDelete.push(dirId);
-      
-      const dir = directories.value.find(d => d.id === dirId);
+      idsToDelete.push(dirId)
+
+      const dir = directories.value.find(d => d.id === dirId)
       if (dir && dir.children.length > 0) {
-        dir.children.forEach(childId => collectIds(childId));
+        dir.children.forEach(childId => collectIds(childId))
       }
-    };
-    
-    collectIds(id);
-    
+    }
+
+    collectIds(id)
+
     if (shouldDeleteDocuments) {
       // 删除该目录下的所有文档
-      const entriesToDelete: number[] = [];
-      
+      const entriesToDelete: number[] = []
+
       // 找出要删除的文档索引
       Object.entries(postDirectoryMap.value).forEach(([postIndex, dirId]) => {
         if (idsToDelete.includes(dirId)) {
-          entriesToDelete.push(Number(postIndex));
+          entriesToDelete.push(Number(postIndex))
         }
-      });
-      
+      })
+
       // 按索引从大到小排序，以避免删除时索引变化
-      entriesToDelete.sort((a, b) => b - a);
-      
+      entriesToDelete.sort((a, b) => b - a)
+
       // 删除文档
       for (const index of entriesToDelete) {
-        posts.value.splice(index, 1);
-        delete postDirectoryMap.value[index];
-        
+        posts.value.splice(index, 1)
+        delete postDirectoryMap.value[index]
+
         // 更新大于删除索引的映射关系
-        Object.keys(postDirectoryMap.value).forEach(key => {
-          const postIndex = Number(key);
+        Object.keys(postDirectoryMap.value).forEach((key) => {
+          const postIndex = Number(key)
           if (postIndex > index) {
-            postDirectoryMap.value[String(postIndex - 1)] = postDirectoryMap.value[String(postIndex)];
-            delete postDirectoryMap.value[String(postIndex)];
+            postDirectoryMap.value[String(postIndex - 1)] = postDirectoryMap.value[String(postIndex)]
+            delete postDirectoryMap.value[String(postIndex)]
           }
-        });
+        })
       }
-      
+
       // 如果当前选中的文档被删除，重置索引
       if (currentPostIndex.value >= posts.value.length) {
-        currentPostIndex.value = Math.max(0, posts.value.length - 1);
+        currentPostIndex.value = Math.max(0, posts.value.length - 1)
       }
-    } else {
+    }
+    else {
       // 将该目录下的所有文档移到根目录
       Object.entries(postDirectoryMap.value).forEach(([postIndex, dirId]) => {
         if (idsToDelete.includes(dirId)) {
-          postDirectoryMap.value[postIndex] = 'root';
+          postDirectoryMap.value[postIndex] = `root`
         }
-      });
+      })
     }
-    
+
     // 从父目录的children列表中移除
     if (dir.parentId !== null) {
-      const parent = directories.value.find(d => d.id === dir.parentId);
+      const parent = directories.value.find(d => d.id === dir.parentId)
       if (parent) {
-        const index = parent.children.indexOf(id);
+        const index = parent.children.indexOf(id)
         if (index !== -1) {
-          parent.children.splice(index, 1);
+          parent.children.splice(index, 1)
         }
       }
     }
-    
+
     // 从directories数组中删除这些目录
-    directories.value = directories.value.filter(d => !idsToDelete.includes(d.id));
+    directories.value = directories.value.filter(d => !idsToDelete.includes(d.id))
   }
 
   // 切换目录的展开/折叠状态
   const toggleDirectoryExpanded = (id: string) => {
-    const dir = directories.value.find(d => d.id === id);
+    const dir = directories.value.find(d => d.id === id)
     if (dir) {
-      dir.isExpanded = !dir.isExpanded;
+      dir.isExpanded = !dir.isExpanded
     }
   }
 
@@ -261,57 +263,62 @@ export const useStore = defineStore(`store`, () => {
   const moveItem = (itemId: string, targetDirId: string, isDirectory: boolean = false): boolean => {
     if (isDirectory) {
       // 不允许将目录移动到自己或自己的子目录中
-      const dir = directories.value.find(d => d.id === itemId);
-      if (!dir) return false;
-      
+      const dir = directories.value.find(d => d.id === itemId)
+      if (!dir)
+        return false
+
       // 检查是否是移到自己或自己的子目录
       const checkIsSelfOrChild = (dirId: string): boolean => {
-        if (dirId === itemId) return true;
-        
-        const dir = directories.value.find(d => d.id === dirId);
-        if (!dir) return false;
-        
-        return dir.parentId !== null ? checkIsSelfOrChild(dir.parentId) : false;
-      };
-      
-      if (checkIsSelfOrChild(targetDirId)) return false;
-      
+        if (dirId === itemId)
+          return true
+
+        const dir = directories.value.find(d => d.id === dirId)
+        if (!dir)
+          return false
+
+        return dir.parentId !== null ? checkIsSelfOrChild(dir.parentId) : false
+      }
+
+      if (checkIsSelfOrChild(targetDirId))
+        return false
+
       // 先从原来的父目录中移除
       if (dir.parentId !== null) {
-        const oldParent = directories.value.find(d => d.id === dir.parentId);
+        const oldParent = directories.value.find(d => d.id === dir.parentId)
         if (oldParent) {
-          const index = oldParent.children.indexOf(itemId);
+          const index = oldParent.children.indexOf(itemId)
           if (index !== -1) {
-            oldParent.children.splice(index, 1);
+            oldParent.children.splice(index, 1)
           }
         }
       }
-      
+
       // 添加到新的父目录
-      const newParent = directories.value.find(d => d.id === targetDirId);
+      const newParent = directories.value.find(d => d.id === targetDirId)
       if (newParent) {
-        newParent.children.push(itemId);
-        dir.parentId = targetDirId;
+        newParent.children.push(itemId)
+        dir.parentId = targetDirId
       }
-    } else {
-      // 移动文档
-      postDirectoryMap.value[itemId] = targetDirId;
     }
-    
-    return true;
+    else {
+      // 移动文档
+      postDirectoryMap.value[itemId] = targetDirId
+    }
+
+    return true
   }
 
-  const addPost = (title: string, directoryId: string = 'root') => {
-    console.log(`[Store] Adding post with title: ${title} to directory: ${directoryId}`);
-    
+  const addPost = (title: string, directoryId: string = `root`) => {
+    console.log(`[Store] Adding post with title: ${title} to directory: ${directoryId}`)
+
     currentPostIndex.value = posts.value.push({
       title,
       content: `# ${title}`,
-    }) - 1;
-    
+    }) - 1
+
     // 添加目录关联
-    postDirectoryMap.value[currentPostIndex.value] = directoryId;
-    console.log(`[Store] Added post at index ${currentPostIndex.value}, post directory map:`, postDirectoryMap.value);
+    postDirectoryMap.value[currentPostIndex.value] = directoryId
+    console.log(`[Store] Added post at index ${currentPostIndex.value}, post directory map:`, postDirectoryMap.value)
   }
 
   const renamePost = (index: number, title: string) => {
@@ -321,18 +328,18 @@ export const useStore = defineStore(`store`, () => {
   const delPost = (index: number) => {
     posts.value.splice(index, 1)
     currentPostIndex.value = Math.min(index, posts.value.length - 1)
-    
+
     // 更新目录映射关系
-    delete postDirectoryMap.value[index];
-    
+    delete postDirectoryMap.value[index]
+
     // 更新大于删除索引的映射关系
-    Object.keys(postDirectoryMap.value).forEach(key => {
-      const postIndex = Number(key);
+    Object.keys(postDirectoryMap.value).forEach((key) => {
+      const postIndex = Number(key)
       if (postIndex > index) {
-        postDirectoryMap.value[postIndex - 1] = postDirectoryMap.value[postIndex];
-        delete postDirectoryMap.value[postIndex];
+        postDirectoryMap.value[postIndex - 1] = postDirectoryMap.value[postIndex]
+        delete postDirectoryMap.value[postIndex]
       }
-    });
+    })
   }
 
   watch(currentPostIndex, () => {
@@ -637,7 +644,7 @@ export const useStore = defineStore(`store`, () => {
   const exportEditorContent2HTML = async () => {
     try {
       const element = document.querySelector(`#output`)!
-      
+
       // 使用内联的setStyles函数
       function setStyles(element: Element) {
         function getElementStyles(element: Element, excludes = [`width`, `height`, `inlineSize`, `webkitLogicalWidth`, `webkitLogicalHeight`]) {
@@ -689,7 +696,7 @@ export const useStore = defineStore(`store`, () => {
           Array.from(element.children).forEach(child => setStyles(child))
         }
       }
-      
+
       setStyles(element)
 
       const htmlStr = element.innerHTML
@@ -698,11 +705,13 @@ export const useStore = defineStore(`store`, () => {
 
       const result = await tauriFs.exportHtml(htmlStr)
       if (result.success) {
-        toast.success('导出HTML文档成功')
-      } else {
-        toast.error(result.message || '导出失败')
+        toast.success(`导出HTML文档成功`)
       }
-    } catch (error) {
+      else {
+        toast.error(result.message || `导出失败`)
+      }
+    }
+    catch (error) {
       toast.error(`导出失败: ${error}`)
     }
   }
@@ -710,13 +719,15 @@ export const useStore = defineStore(`store`, () => {
   // 导出 Markdown 文档
   const exportEditorContent2MD = async () => {
     try {
-      const result = await tauriFs.exportMarkdown(posts.value[currentPostIndex.value].content)
+      const result = await tauriFs.exportMarkdown(posts.value[currentPostIndex.value].content, posts.value[currentPostIndex.value].title)
       if (result.success) {
-        toast.success('导出Markdown文档成功')
-      } else {
-        toast.error(result.message || '导出失败')
+        toast.success(`导出Markdown文档成功`)
       }
-    } catch (error) {
+      else {
+        toast.error(result.message || `导出失败`)
+      }
+    }
+    catch (error) {
       toast.error(`导出失败: ${error}`)
     }
   }
@@ -724,15 +735,17 @@ export const useStore = defineStore(`store`, () => {
   // 导入 Markdown 文档
   const importMarkdownContent = async () => {
     try {
-      const result = await tauriFs.openFile(['md'])
+      const result = await tauriFs.openFile([`md`])
       if (result.success && result.content) {
         posts.value[currentPostIndex.value].content = result.content
         toRaw(editor.value!).setValue(result.content)
-        toast.success('导入Markdown文档成功')
-      } else if (!result.success) {
-        toast.error(result.message || '导入失败')
+        toast.success(`导入Markdown文档成功`)
       }
-    } catch (error) {
+      else if (!result.success) {
+        toast.error(result.message || `导入失败`)
+      }
+    }
+    catch (error) {
       toast.error(`导入失败: ${error}`)
     }
   }
@@ -804,7 +817,7 @@ export const useStore = defineStore(`store`, () => {
     delPost,
     isOpenPostSlider,
     isOpenRightSlider,
-    
+
     // 新增的目录相关方法
     directories,
     postDirectoryMap,
