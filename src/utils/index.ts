@@ -427,3 +427,9 @@ export function processClipboardContent(primaryColor: string) {
 export function isEmptyObject(obj: object) {
   return obj && typeof obj === `object` && Object.keys(obj).length === 0
 }
+
+// 处理导入文件名
+export function extractWithRegex(path: string): string {
+  const match = path.match(/(?:\/|^)([^/]+?)(?=\.md$|$)/)
+  return match ? match[1] : ``
+}

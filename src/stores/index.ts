@@ -2,7 +2,7 @@ import type { ReadTimeResults } from 'reading-time'
 import DEFAULT_CONTENT from '@/assets/example/markdown.md?raw'
 import DEFAULT_CSS_CONTENT from '@/assets/example/theme-css.txt?raw'
 import { altKey, codeBlockThemeOptions, colorOptions, fontFamilyOptions, fontSizeOptions, legendOptions, shiftKey, themeMap, themeOptions } from '@/config'
-import { addPrefix, css2json, customCssWithTemplate, customizeTheme, formatDoc } from '@/utils'
+import { addPrefix, css2json, customCssWithTemplate, customizeTheme, extractWithRegex, formatDoc } from '@/utils'
 import { initRenderer } from '@/utils/renderer'
 
 import { tauriFs } from '@/utils/tauri-fs'
@@ -308,12 +308,12 @@ export const useStore = defineStore(`store`, () => {
     return true
   }
 
-  const addPost = (title: string, directoryId: string = `root`) => {
+  const addPost = (title: string, directoryId: string = `root`, content?: string) => {
     console.log(`[Store] Adding post with title: ${title} to directory: ${directoryId}`)
 
     currentPostIndex.value = posts.value.push({
       title,
-      content: `# ${title}`,
+      content: content || `# ${title}`,
     }) - 1
 
     // 添加目录关联
@@ -733,13 +733,35 @@ export const useStore = defineStore(`store`, () => {
   }
 
   // 导入 Markdown 文档
-  const importMarkdownContent = async () => {
+  const importMarkdownContent = async (isRightImport?: boolean) => {
     try {
       const result = await tauriFs.openFile([`md`])
       if (result.success && result.content) {
-        posts.value[currentPostIndex.value].content = result.content
-        toRaw(editor.value!).setValue(result.content)
-        toast.success(`导入Markdown文档成功`)
+        // feat: 右键菜单导入MD到已选择内容中
+        if (isRightImport) {
+          posts.value[currentPostIndex.value].content = result.content
+          toRaw(editor.value!).setValue(result.content)
+          toast.success(`导入Markdown文档成功`)
+          return
+        }
+        const importName = extractWithRegex(result.path)
+        if (!posts.value.some(post => post.title === importName)) {
+          addPost(importName, `root`, result.content)
+          toast.success(`导入Markdown文档成功`)
+        }
+        else {
+          toast.error(`导入文件已存在`)
+        }
+
+        // addPost(importName, `root`, result.content)
+        // posts.value.push({
+        //   title: extractWithRegex(result.path),
+        //   content: result.content,
+        // })
+
+        // posts.value[currentPostIndex.value].content = result.content
+        // toRaw(editor.value!).setValue(result.content)
+        // toast.success(`导入Markdown文档成功`)
       }
       else if (!result.success) {
         toast.error(result.message || `导入失败`)

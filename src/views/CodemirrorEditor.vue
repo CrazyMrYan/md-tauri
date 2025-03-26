@@ -400,7 +400,7 @@ onMounted(() => {
                 恢复默认样式
               </ContextMenuItem>
               <ContextMenuSeparator />
-              <ContextMenuItem inset @click="importMarkdownContent()">
+              <ContextMenuItem inset @click="importMarkdownContent(true)">
                 导入 .md 文档
               </ContextMenuItem>
               <ContextMenuItem inset @click="exportEditorContent2MD()">
