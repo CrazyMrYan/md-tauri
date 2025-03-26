@@ -423,3 +423,7 @@ export function processClipboardContent(primaryColor: string) {
     grand.appendChild(section)
   })
 }
+
+export function isEmptyObject(obj: object) {
+  return obj && typeof obj === `object` && Object.keys(obj).length === 0
+}
