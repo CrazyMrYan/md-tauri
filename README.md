@@ -18,11 +18,11 @@ A modern Markdown editor built with Tauri and Vue 3, providing a seamless deskto
 
 ## Installation Package
 
-| System                                 | Package                                                                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| ![](./public/assets/icons/macos.png)   | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_x64%2D1.1.0.dmg)         |
-| ![](./public/assets/icons/windows.png) | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_x64_zh%2DCN%2D1.1.0.msi) |
-| ![](./public/assets/icons/ubuntu.png)  | [Download](https://github.com/CrazyMrYan/md-tauri/releases/tag/v1.1.0#:~:text=md%2Dtauri_1.1.0_amd64%2D1.1.0.deb)       |
+| System                                 | Package                                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| ![](./public/assets/icons/macos.png)   | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.dmg)             |
+| ![](./public/assets/icons/windows.png) | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.msi)             |
+| ![](./public/assets/icons/ubuntu.png)  | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.deb)             |
 
 ## Preview Screenshots
 
