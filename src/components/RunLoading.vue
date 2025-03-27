@@ -34,12 +34,12 @@ onMounted(() => {
   font-size: 18px;
   background-color: hsl(var(--background));
 
-  &::before {
-    content: url('../assets/images/favicon.png');
-    width: 100px;
-    height: 100px;
-    margin-bottom: 26px;
-  }
+  // &::before {
+  //   content: url('../assets/images/favicon.png');
+  //   width: 100px;
+  //   height: 100px;
+  //   margin-bottom: 26px;
+  // }
 }
 
 .fade-enter,
