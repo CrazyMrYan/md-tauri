@@ -57,7 +57,7 @@
       }
     },
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' data: blob: filesystem: https: 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https:;",
       "dangerousDisableAssetCspModification": ["script-src", "style-src"]
     },
     "windows": [

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CodemirrorEditor from '@/views/CodemirrorEditor.vue'
+console.log('Init App')
 </script>
 
 <template>

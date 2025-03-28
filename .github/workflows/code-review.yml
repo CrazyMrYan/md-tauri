@@ -20,4 +20,4 @@ jobs:
         with:
           chat-token: ${{ secrets.CHAT_TOKEN }}
           base-url: ${{ secrets.BASE_URL }}
-          model: ${{CHAT_TOKEN}}
+          model: ${{ secrets.CHAT_MODEL }}
