@@ -332,7 +332,52 @@ function delPost() {
   isDeletingPost.value = true
 
   try {
+    // Check if this is the last post
+    const isLastPost = store.posts.length <= 1
+    
+    // Delete the post
     store.delPost(editTarget.value)
+    
+    // If that was the last post, create a new default one
+    if (isLastPost) {
+      const defaultContent = '# 新文档\n\n开始编辑...'
+      store.addPost('新文档', 'root', defaultContent)
+      
+      // Ensure the UI is updated properly
+      setTimeout(() => {
+        if (store.editor) {
+          store.editor.setValue(defaultContent)
+          store.editorRefresh()
+        }
+      }, 100)
+      
+      toast.success('已创建新文档')
+    }
+    
+    // Force editor to refresh with the current post content
+    if (store.editor) {
+      try {
+        // Make sure we have valid content to display
+        if (store.posts.length > 0 && store.currentPostIndex >= 0 && store.currentPostIndex < store.posts.length) {
+          // Set the content in the editor
+          store.editor.setValue(store.posts[store.currentPostIndex].content)
+          
+          // Schedule editor refresh with a delay to ensure proper initialization
+          setTimeout(() => {
+            try {
+              store.editorRefresh()
+            } catch (refreshError) {
+              console.error('Error refreshing editor:', refreshError)
+            }
+          }, 100)
+        } else {
+          console.error('Invalid post index after deletion:', store.currentPostIndex)
+        }
+      } catch (editorError) {
+        console.error('Error updating editor content:', editorError)
+      }
+    }
+    
     toast.success(`内容删除成功`)
   }
   catch (error) {

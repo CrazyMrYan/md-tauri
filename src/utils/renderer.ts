@@ -274,7 +274,7 @@ export function initRenderer(opts: IOpts) {
       const subText = styledContent(`figcaption`, transform(opts.legend!, text, title))
       const figureStyles = styles(`figure`)
       const imgStyles = styles(`image`)
-      return `<figure ${figureStyles}><img ${imgStyles} src="${href}" title="${title}" alt="${text}"/>${subText}</figure>`
+      return `<figure ${figureStyles}><img ${imgStyles} src="${href}" title="${title}" alt="${text}" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' width=\\'36\\' height=\\'36\\'%3E%3Cpath fill=\\'%23ccc\\' d=\\'M2.28 3.22a.75.75 0 0 0-1.06 1.06l4.928 4.929a4.75 4.75 0 0 0-1.9 3.791v8.5a.75.75 0 0 0 .75.75h12a.75.75 0 0 0 .402-.116l1.282 1.283a.75.75 0 1 0 1.06-1.061l-1.57-1.57-6.96-6.96L4.289 6.22l-2.01-3Zm7.57 7.57l6.94 6.94a.755.755 0 0 1-.039.002H5.75v-8.5a3.25 3.25 0 0 1 1.32-2.618l2.78 2.76Zm3.436-6.49h5.964v7.19l1.5 1.5V3.55a.75.75 0 0 0-.75-.75h-8.5a.75.75 0 0 0-.686.457l1.159 1.157a.743.743 0 0 0 .313-.114Z\\'/%3E%3C/svg%3E';this.style.border='1px solid #ddd';this.style.padding='8px';" />${subText}</figure>`
     },
 
     link({ href, title, text, tokens }: Tokens.Link): string {
