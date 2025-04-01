@@ -1,87 +1,90 @@
 # MD-Tauri
 
-[简体中文](README_zh.md) | English
+<div align="center">
+  <img src="./public/assets/images/logo-2.png" alt="MD-Tauri Logo" width="200">
+</div>
 
-A modern Markdown editor built with Tauri and Vue 3, providing a seamless desktop experience for Markdown editing and preview.
+<div align="center">
 
-## Features
+[![Code Review](https://github.com/CrazyMrYan/md-tauri/actions/workflows/code-review.yml/badge.svg)](https://github.com/CrazyMrYan/md-tauri/actions/workflows/code-review.yml)
+[![Cross-Platform Build](https://github.com/CrazyMrYan/md-tauri/actions/workflows/cross-platform-build.yml/badge.svg)](https://github.com/CrazyMrYan/md-tauri/actions/workflows/cross-platform-build.yml)
 
-- 🚀 Built with Tauri + Vue 3 for optimal desktop performance
-- 📝 Real-time Markdown preview
-- 🎨 Support for code syntax highlighting
-- 📊 Mermaid diagram support
-- 🧮 Mathematical formula rendering
-- 🖼️ Multiple image upload options
-- 💾 Auto-save drafts
-- 🎯 Custom theme and CSS styling
-- 📤 Import/Export functionality
+**简体中文** | [English](README_en.md)
 
-## Installation Package
+</div>
 
-| System                                 | Package                                                                                 |
+一个使用 Tauri 和 Vue 3 构建的现代化 Markdown 编辑器，为 Markdown 编辑和预览提供流畅的桌面体验。
+
+## 特性
+
+- 🚀 使用 Tauri + Vue 3 构建，实现最佳桌面性能
+- 📝 实时 Markdown 预览
+- 🎨 代码语法高亮支持
+- 📊 Mermaid 图表支持
+- 🧮 数学公式渲染
+- 🖼️ 多种图片上传选项
+- 💾 草稿自动保存
+- 🎯 自定义主题和 CSS 样式
+- 📤 导入/导出功能
+
+## 安装包
+
+| 系统                                   | 安装包                                                                                 |
 | -------------------------------------- | --------------------------------------------------------------------------------------- |
-| ![](./public/assets/icons/macos.png)   | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.dmg)             |
-| ![](./public/assets/icons/windows.png) | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.msi)             |
-| ![](./public/assets/icons/ubuntu.png)  | [Download](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.deb)             |
+| ![](./public/assets/icons/macos.png)   | [下载](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.dmg)             |
+| ![](./public/assets/icons/windows.png) | [下载](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.msi)             |
+| ![](./public/assets/icons/ubuntu.png)  | [下载](https://github.com/CrazyMrYan/md-tauri/releases/latest) (.deb)             |
 
-## Preview Screenshots
+## 示意图
 
-![Default App](./public/assets/images/Snipaste_2025-03-07_14-10-08.png)
+![示意图](./public/diagram.png)
 
-![Dark Theme](./public/assets/images/Snipaste_2025-03-07_14-11-26.png)
+## 开发设置
 
-![Custom Theme](./public/assets/images/Snipaste_2025-03-07_14-12-20.png)
-
-![Image Hosting Configuration](./public/assets/images/Snipaste_2025-03-07_14-12-58.png)
-
-![VuePress Support](./public/assets/images/Snipaste_2025-03-07_14-16-31.png)
-
-## Development Setup
-
-### Prerequisites
+### 环境要求
 
 - Node.js >= 20
-- Rust (for Tauri)
+- Rust (Tauri 所需)
 - Git
 
-### Installation
+### 安装
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git@github.com:CrazyMrYan/md-tauri.git
 cd md-tauri
 
-# Install dependencies
+# 安装依赖
 npm install
 ```
 
-### Development Commands
+### 开发命令
 
 ```bash
-# Start development server
+# 启动开发服务器
 npm run tauri:dev
 
-# Build for production
+# 构建生产版本
 npm run tauri:build
 
-# Run web version (without Tauri)
+# 运行网页版本（不含 Tauri）
 npm run dev:web
 
-# Lint files
+# 代码检查
 npm run lint
 ```
 
-## Build
+## 构建
 
-To build the application for production:
+构建生产版本：
 
 ```bash
 npm run tauri:build
 ```
 
-This will create platform-specific binaries in the `src-tauri/target/release` directory.
+这将在 `src-tauri/target/release` 目录下创建对应平台的可执行文件。
 
-## Tech Stack
+## 技术栈
 
 - Tauri
 - Vue 3
@@ -91,16 +94,16 @@ This will create platform-specific binaries in the `src-tauri/target/release` di
 - CodeMirror
 - Marked
 - Mermaid
-- And more...
+- 等等...
 
-## Contributing
+## 贡献指南
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m '添加一些很棒的特性'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 提交 Pull Request
 
-## License
+## 开源协议
 
-This project is open source and available under the [MIT License](LICENSE).
+本项目采用 [MIT 协议](LICENSE) 开源。
