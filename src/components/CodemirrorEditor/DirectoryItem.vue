@@ -9,16 +9,9 @@ import { useStore } from '@/stores'
 const props = defineProps<{
   directoryId: string;
   level: number;
-  dropTargetId?: string | null;
-  isDraggingOver?: boolean;
 }>();
 
 const emit = defineEmits<{
-  'drag-start': [event: DragEvent, id: string, type: 'directory' | 'post'];
-  'drag-end': [event: Event];
-  'drag-over': [event: DragEvent, id: string];
-  'drag-leave': [];
-  'drop': [event: DragEvent, targetId: string];
   'show-add-subdirectory-dialog': [parentId: string];
   'show-rename-directory-dialog': [dirId: string];
   'start-del-directory': [dirId: string];
@@ -44,11 +37,6 @@ const directoryPosts = computed(() => {
   return postIndices.map(index => ({ index, post: store.posts[index] }));
 });
 
-// Computed for whether the dropTarget matches this directory ID
-const isDropTarget = computed(() => {
-  return props.dropTargetId === props.directoryId && props.isDraggingOver;
-});
-
 // Handler for directory click
 const handleDirectoryClick = (event: MouseEvent) => {
   // Ignore right-clicks
@@ -67,13 +55,6 @@ const selectPost = (index: number) => {
   <div class="directory-tree-item">
     <div 
       class="directory-item flex items-center p-1 rounded cursor-pointer"
-      :class="{ 'bg-primary/20': isDropTarget }"
-      draggable="true"
-      @dragstart="emit('drag-start', $event, directoryId, 'directory')"
-      @dragend="emit('drag-end', $event)"
-      @dragover="emit('drag-over', $event, directoryId)"
-      @dragleave="emit('drag-leave')"
-      @drop="emit('drop', $event, directoryId)"
       @click="handleDirectoryClick($event)"
     >
       <span class="directory-expander w-4 flex-shrink-0" @click.stop="emit('directory-click', directoryId, $event)">
@@ -119,13 +100,6 @@ const selectPost = (index: number) => {
         :key="childId"
         :directory-id="childId"
         :level="level + 1"
-        :drop-target-id="dropTargetId"
-        :is-dragging-over="isDraggingOver"
-        @drag-start="(event, id, type) => emit('drag-start', event, id, type)"
-        @drag-end="(event) => emit('drag-end', event)"
-        @drag-over="(event, id) => emit('drag-over', event, id)"
-        @drag-leave="emit('drag-leave')"
-        @drop="(event, targetId) => emit('drop', event, targetId)"
         @show-add-subdirectory-dialog="(parentId) => emit('show-add-subdirectory-dialog', parentId)"
         @show-rename-directory-dialog="(dirId) => emit('show-rename-directory-dialog', dirId)"
         @start-del-directory="(dirId) => emit('start-del-directory', dirId)"
@@ -140,17 +114,14 @@ const selectPost = (index: number) => {
         v-for="{ index, post } in directoryPosts" 
         :key="`post-${index}`"
         class="post-item flex items-center p-1 rounded cursor-pointer"
-        :class="{ 'bg-primary/80 text-white': store.currentPostIndex === index, 'bg-primary/20': dropTargetId === String(index) && isDraggingOver }"
-        draggable="true"
-        @dragstart="emit('drag-start', $event, String(index), 'post')"
-        @dragend="emit('drag-end', $event)"
-        @dragover="emit('drag-over', $event, String(index))"
-        @dragleave="emit('drag-leave')"
-        @drop="emit('drop', $event, String(index))"
+        :style="{ 
+          'background': store.currentPostIndex === index ? 'hsl(var(--foreground))' : '', 
+          'color': store.currentPostIndex === index ? 'hsl(var(--primary-foreground))' : 'hsl(var(--accent-foreground))' 
+        }"
         @click="selectPost(index)"
       >
         <span class="w-4 flex-shrink-0"></span>
-        <File class="size-4 mr-1 flex-shrink-0" :class="store.currentPostIndex === index ? 'text-white' : 'text-muted-foreground'" />
+        <File class="size-4 mr-1 flex-shrink-0" />
         <span class="post-title line-clamp-1 select-none">{{ post.title }}</span>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
