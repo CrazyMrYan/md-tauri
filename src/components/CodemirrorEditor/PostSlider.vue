@@ -15,12 +15,6 @@ import DirectoryItem from './DirectoryItem.vue'
 
 const store = useStore()
 
-// 拖拽相关状态
-const draggingItemId = ref<string | null>(null)
-const draggingType = ref<`directory` | `post` | null>(null)
-const dropTargetId = ref<string | null>(null)
-const isDraggingOver = ref(false)
-
 // 侧边栏宽度拖拽相关
 const isResizing = ref(false)
 const sliderWidth = ref(220)
@@ -389,97 +383,6 @@ function delPost() {
   }
 }
 
-// Drag and drop handlers
-function handleDragStart(event: DragEvent, id: string, type: `directory` | `post`) {
-  if (!event.dataTransfer)
-    return
-
-  draggingItemId.value = id
-  draggingType.value = type
-
-  event.dataTransfer.effectAllowed = `move`
-  event.dataTransfer.setData(`text/plain`, id)
-
-  // 添加半透明效果
-  if (event.target instanceof HTMLElement) {
-    event.target.style.opacity = `0.4`
-  }
-}
-
-function handleDragEnd(event: Event) {
-  if (event.target instanceof HTMLElement) {
-    event.target.style.opacity = `1`
-  }
-
-  draggingItemId.value = null
-  draggingType.value = null
-  dropTargetId.value = null
-  isDraggingOver.value = false
-}
-
-function handleDragOver(event: DragEvent, id: string) {
-  if (!event.dataTransfer || draggingItemId.value === id) {
-    return
-  }
-
-  // 阻止默认行为使得可以触发drop
-  event.preventDefault()
-
-  // 仅允许移动操作
-  event.dataTransfer.dropEffect = `move`
-
-  // 如果拖动的是目录，而目标是文档，则不允许
-  if (draggingType.value === `directory` && id.match(/^\d+$/)) {
-    return
-  }
-
-  dropTargetId.value = id
-  isDraggingOver.value = true
-}
-
-function handleDragLeave() {
-  dropTargetId.value = null
-  isDraggingOver.value = false
-}
-
-function handleDrop(event: DragEvent, targetId: string) {
-  // 阻止默认行为
-  event.preventDefault()
-
-  // 重置状态
-  dropTargetId.value = null
-  isDraggingOver.value = false
-
-  // 如果没有拖动项，或者拖放到自己身上，则不进行任何操作
-  if (!draggingItemId.value || draggingItemId.value === targetId) {
-    return
-  }
-
-  // 如果拖动的是目录，而目标是文档，则不允许
-  if (draggingType.value === `directory` && targetId.match(/^\d+$/)) {
-    toast.error(`不能将目录拖放到文档上`)
-    return
-  }
-
-  // 执行移动操作
-  const success = store.moveItem(
-    draggingItemId.value,
-    targetId,
-    draggingType.value === `directory`,
-  )
-
-  if (success) {
-    toast.success(`${draggingType.value === `directory` ? `目录` : `文档`}移动成功`)
-  }
-  else {
-    toast.error(`无法移动到目标位置`)
-  }
-
-  // 重置拖动状态
-  draggingItemId.value = null
-  draggingType.value = null
-}
-
 // Add logging to isVuepressFormat changes
 watch(isVuepressFormat, (newVal) => {
   console.log(`VuePress format changed to: ${newVal}`)
@@ -506,7 +409,7 @@ watch(isVuepressFormat, (newVal) => {
       <div class="mb-2 flex gap-2">
         <Dialog v-model:open="isOpen">
           <DialogTrigger as-child>
-            <Button variant="outline" class="flex-1 justify-between" size="xs">
+            <Button variant="outline" class="flex-1 justify-center" size="xs">
               <Plus class="size-4" /> <span>新增文档</span>
             </Button>
           </DialogTrigger>
@@ -583,8 +486,8 @@ watch(isVuepressFormat, (newVal) => {
 
         <Dialog v-model:open="isOpenDirDialog">
           <DialogTrigger as-child>
-            <Button variant="outline" size="xs" class="flex-1 justify-between" @click="openNewDirectoryDialog">
-              <FolderPlus class="size-4" /> 新增目录
+            <Button variant="outline" size="xs" class="flex-1 justify-center" @click="openNewDirectoryDialog">
+              <FolderPlus class="size-4 mr-1" /> 新增目录
             </Button>
           </DialogTrigger>
           <DialogContent class="sm:max-w-[425px]">
@@ -613,13 +516,6 @@ watch(isVuepressFormat, (newVal) => {
           <DirectoryItem
             :directory-id="childId"
             :level="0"
-            :drop-target-id="dropTargetId"
-            :is-dragging-over="isDraggingOver"
-            @drag-start="handleDragStart"
-            @drag-end="handleDragEnd"
-            @drag-over="handleDragOver"
-            @drag-leave="handleDragLeave"
-            @drop="handleDrop"
             @show-add-subdirectory-dialog="showAddSubdirectoryDialog"
             @show-rename-directory-dialog="showRenameDirectoryDialog"
             @start-del-directory="startDelDirectory"
@@ -634,17 +530,14 @@ watch(isVuepressFormat, (newVal) => {
         <template v-for="{ index, post } in getPostsByDirectory('root')" :key="`post-${index}`">
           <div
             class="post-item flex cursor-pointer items-center rounded p-1"
-            :class="{ 'bg-primary/80 text-white': store.currentPostIndex === index, 'bg-primary/20': dropTargetId === String(index) && isDraggingOver }"
-            draggable="true"
-            @dragstart="handleDragStart($event, String(index), 'post')"
-            @dragend="handleDragEnd"
-            @dragover="handleDragOver($event, String(index))"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop($event, String(index))"
+            :style="{ 
+              'background': store.currentPostIndex === index ? 'hsl(var(--foreground))' : '', 
+              'color': store.currentPostIndex === index ? 'hsl(var(--primary-foreground))' : 'hsl(var(--accent-foreground))' 
+            }"
             @click="store.currentPostIndex = index"
           >
             <span class="w-4 flex-shrink-0" />
-            <File class="mr-1 size-4 flex-shrink-0" :class="store.currentPostIndex === index ? 'text-white' : 'text-muted-foreground'" />
+            <File class="mr-1 size-4 flex-shrink-0" />
             <span class="post-title line-clamp-1 select-none">{{ post.title }}</span>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
@@ -764,13 +657,13 @@ textarea {
   user-select: text !important;
 }
 
-// 拖拽样式
-[draggable] {
-  user-select: none;
+// 设置文档标题和目录名称的字体大小为系统默认
+.post-title {
+  font-size: 0.875rem; /* System default size */
 }
 
-.drag-over {
-  border: 2px dashed var(--primary);
-  background-color: rgba(var(--primary-rgb), 0.1);
+// 确保对话框标题和按钮文本也使用合适的字体大小
+:deep(.dialog-title) {
+  font-size: 1rem;
 }
 </style>

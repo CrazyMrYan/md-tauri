@@ -79,9 +79,14 @@ function leftAndRightScroll() {
 }
 
 onMounted(() => {
+  initEditor()
+  
+  // Add a small delay to ensure the editor is fully initialized
   setTimeout(() => {
+    onEditorRefresh()
+    mdLocalToRemote()
     leftAndRightScroll()
-  }, 300)
+  }, 500)
 })
 
 // 更新编辑器
@@ -173,6 +178,7 @@ watch(isDark, () => {
 function initEditor() {
   const editorDom = document.querySelector<HTMLTextAreaElement>(`#editor`)!
 
+  // Ensure editorDom has the current post content
   if (!editorDom.value) {
     editorDom.value = store.posts[store.currentPostIndex].content
   }
@@ -354,12 +360,6 @@ function mdLocalToRemote() {
     return result
   }
 }
-
-onMounted(() => {
-  initEditor()
-  onEditorRefresh()
-  mdLocalToRemote()
-})
 </script>
 
 <template>

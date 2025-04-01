@@ -439,7 +439,56 @@ export const useStore = defineStore(`store`, () => {
     codeThemeChange()
     renderer.reset({ citeStatus: isCiteStatus.value, legend: legend.value, isUseIndent: isUseIndent.value, countStatus: isCountStatus.value })
 
-    const { markdownContent, readingTime: readingTimeResult } = renderer.parseFrontMatterAndContent(editor.value!.getValue())
+    // Ensure editor exists before using it
+    if (!editor.value) {
+      console.warn('Editor not initialized yet - rendering default content instead')
+      
+      // Render the default content as a fallback
+      const { markdownContent, readingTime: readingTimeResult } = renderer.parseFrontMatterAndContent(posts.value[currentPostIndex.value].content)
+      readingTime.value = readingTimeResult
+      let outputTemp = marked.parse(markdownContent) as string
+      outputTemp = DOMPurify.sanitize(outputTemp)
+
+      // 阅读时间及字数统计
+      outputTemp = renderer.buildReadingTime(readingTimeResult) + outputTemp
+
+      // 去除第一行的 margin-top
+      outputTemp = outputTemp.replace(/(style=".*?)"/, `$1;margin-top: 0"`)
+      // 引用脚注
+      outputTemp += renderer.buildFootnotes()
+      // 附加的一些 style
+      outputTemp += renderer.buildAddition()
+
+      if (isMacCodeBlock.value) {
+        outputTemp += `
+          <style>
+            .hljs.code__pre > .mac-sign {
+              display: flex;
+            }
+          </style>
+        `
+      }
+
+      outputTemp += `
+        <style>
+          .code__pre {
+            padding: 0 !important;
+          }
+
+          .hljs.code__pre code {
+            display: -webkit-box;
+            padding: 0.5em 1em 1em;
+            overflow-x: auto;
+            text-indent: 0;
+          }
+        </style>
+      `
+
+      output.value = renderer.createContainer(outputTemp)
+      return
+    }
+
+    const { markdownContent, readingTime: readingTimeResult } = renderer.parseFrontMatterAndContent(editor.value.getValue())
     readingTime.value = readingTimeResult
     let outputTemp = marked.parse(markdownContent) as string
     outputTemp = DOMPurify.sanitize(outputTemp)

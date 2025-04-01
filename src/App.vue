@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import CodemirrorEditor from '@/views/CodemirrorEditor.vue'
+import { useStore } from '@/stores'
+
 console.log('Init App')
+
+const store = useStore()
+
+// Ensure preview gets rendered immediately on app load
+onMounted(() => {
+  store.editorRefresh()
+})
 </script>
 
 <template>
