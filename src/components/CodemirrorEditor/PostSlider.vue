@@ -773,4 +773,14 @@ textarea {
   border: 2px dashed var(--primary);
   background-color: rgba(var(--primary-rgb), 0.1);
 }
+
+// 设置文档标题和目录名称的字体大小为系统默认
+.post-title {
+  font-size: 0.875rem; /* System default size */
+}
+
+// 确保对话框标题和按钮文本也使用合适的字体大小
+:deep(.dialog-title) {
+  font-size: 1rem;
+}
 </style>

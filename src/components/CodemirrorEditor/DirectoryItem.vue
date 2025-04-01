@@ -198,6 +198,7 @@ const selectPost = (index: number) => {
   text-overflow: ellipsis;
   max-width: calc(100% - 3.5rem);
   margin-right: 0.25rem;
+  font-size: 0.875rem; /* System default size */
 }
 
 .post-title {
@@ -207,5 +208,6 @@ const selectPost = (index: number) => {
   text-overflow: ellipsis;
   max-width: calc(100% - 3.5rem);
   margin-right: 0.25rem;
+  font-size: 0.875rem; /* System default size */
 }
 </style> 
