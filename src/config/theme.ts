@@ -269,8 +269,8 @@ const defaultTheme: Theme = {
     td: {
       'border': `1px solid #dfdfdf`,
       'padding': `0.25em 0.5em`,
-      'color': `#3f3f3f`,
       'word-break': `keep-all`,
+      'color': `hsl(var(--foreground)) !important`,
     },
 
     footnote: {
