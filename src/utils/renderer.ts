@@ -9,6 +9,7 @@ import hljs from 'highlight.js'
 import { marked } from 'marked'
 import mermaid from 'mermaid'
 import readingTime from 'reading-time'
+import { URL } from 'url'
 
 import { getStyleString } from '.'
 import markedAlert from './MDAlert'
@@ -279,8 +280,14 @@ export function initRenderer(opts: IOpts) {
 
     link({ href, title, text, tokens }: Tokens.Link): string {
       const parsedText = this.parser.parseInline(tokens)
-      if (href.startsWith(`https://mp.weixin.qq.com`)) {
-        return `<a href="${href}" title="${title || text}" ${styles(`wx_link`)}>${parsedText}</a>`
+      const allowedHosts = ['mp.weixin.qq.com']
+      try {
+        const url = new URL(href)
+        if (allowedHosts.includes(url.host)) {
+          return `<a href="${href}" title="${title || text}" ${styles(`wx_link`)}>${parsedText}</a>`
+        }
+      } catch (e) {
+        console.error('Invalid URL:', href)
       }
       if (href === text) {
         return parsedText
