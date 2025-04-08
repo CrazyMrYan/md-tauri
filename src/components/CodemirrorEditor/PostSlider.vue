@@ -292,6 +292,10 @@ function addPost() {
     store.addPost(addPostInputVal.value, selectedDirectoryId.value)
     console.log(`Added regular post to directory ${selectedDirectoryId.value}`)
     toast.success(`文档新增成功 - 已添加到 ${store.findDirectoryPath(selectedDirectoryId.value).join(` / `)}`)
+    // todo 后续改为是否选中目录后再判断新建在根目录还是文件夹中
+    if (addPostInputVal.value !== `root`) {
+      selectedDirectoryId.value = `root`
+    }
   }
 
   isOpen.value = false
@@ -328,15 +332,15 @@ function delPost() {
   try {
     // Check if this is the last post
     const isLastPost = store.posts.length <= 1
-    
+
     // Delete the post
     store.delPost(editTarget.value)
-    
+
     // If that was the last post, create a new default one
     if (isLastPost) {
-      const defaultContent = '# 新文档\n\n开始编辑...'
-      store.addPost('新文档', 'root', defaultContent)
-      
+      const defaultContent = `# 新文档\n\n开始编辑...`
+      store.addPost(`新文档`, `root`, defaultContent)
+
       // Ensure the UI is updated properly
       setTimeout(() => {
         if (store.editor) {
@@ -344,10 +348,10 @@ function delPost() {
           store.editorRefresh()
         }
       }, 100)
-      
-      toast.success('已创建新文档')
+
+      toast.success(`已创建新文档`)
     }
-    
+
     // Force editor to refresh with the current post content
     if (store.editor) {
       try {
@@ -355,23 +359,26 @@ function delPost() {
         if (store.posts.length > 0 && store.currentPostIndex >= 0 && store.currentPostIndex < store.posts.length) {
           // Set the content in the editor
           store.editor.setValue(store.posts[store.currentPostIndex].content)
-          
+
           // Schedule editor refresh with a delay to ensure proper initialization
           setTimeout(() => {
             try {
               store.editorRefresh()
-            } catch (refreshError) {
-              console.error('Error refreshing editor:', refreshError)
+            }
+            catch (refreshError) {
+              console.error(`Error refreshing editor:`, refreshError)
             }
           }, 100)
-        } else {
-          console.error('Invalid post index after deletion:', store.currentPostIndex)
         }
-      } catch (editorError) {
-        console.error('Error updating editor content:', editorError)
+        else {
+          console.error(`Invalid post index after deletion:`, store.currentPostIndex)
+        }
+      }
+      catch (editorError) {
+        console.error(`Error updating editor content:`, editorError)
       }
     }
-    
+
     toast.success(`内容删除成功`)
   }
   catch (error) {
@@ -487,7 +494,7 @@ watch(isVuepressFormat, (newVal) => {
         <Dialog v-model:open="isOpenDirDialog">
           <DialogTrigger as-child>
             <Button variant="outline" size="xs" class="flex-1 justify-center" @click="openNewDirectoryDialog">
-              <FolderPlus class="size-4 mr-1" /> 新增目录
+              <FolderPlus class="mr-1 size-4" /> 新增目录
             </Button>
           </DialogTrigger>
           <DialogContent class="sm:max-w-[425px]">
@@ -530,9 +537,9 @@ watch(isVuepressFormat, (newVal) => {
         <template v-for="{ index, post } in getPostsByDirectory('root')" :key="`post-${index}`">
           <div
             class="post-item flex cursor-pointer items-center rounded p-1"
-            :style="{ 
-              'background': store.currentPostIndex === index ? 'hsl(var(--foreground))' : '', 
-              'color': store.currentPostIndex === index ? 'hsl(var(--primary-foreground))' : 'hsl(var(--accent-foreground))' 
+            :style="{
+              background: store.currentPostIndex === index ? 'hsl(var(--foreground))' : '',
+              color: store.currentPostIndex === index ? 'hsl(var(--primary-foreground))' : 'hsl(var(--accent-foreground))',
             }"
             @click="store.currentPostIndex = index"
           >
